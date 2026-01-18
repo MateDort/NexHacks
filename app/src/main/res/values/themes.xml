@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme -->
+    <style name="Base.Theme.TapMate" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/tapmate_orange</item>
+        <item name="colorPrimaryVariant">@color/tapmate_dark_blue</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/tapmate_blue</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="android:windowBackground">@color/high_contrast_bg</item>
+    </style>
+
+    <style name="Theme.TapMate" parent="Base.Theme.TapMate" />
+</resources>

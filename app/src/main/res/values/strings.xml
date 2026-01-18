@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TapMate</string>
+    <string name="settings_title">Settings</string>
+
+    <!-- Main screen -->
+    <string name="tap_to_speak">Tap to speak</string>
+    <string name="listening">Listening...</string>
+    <string name="processing">Processing...</string>
+    <string name="stop_session">Stop</string>
+    <string name="mute_mic">Mute</string>
+
+    <!-- Settings -->
+    <string name="personality_settings">Personality Settings</string>
+    <string name="accessibility_settings">Accessibility Settings</string>
+    <string name="humor_level">Humor Level</string>
+    <string name="honesty_level">Honesty Level</string>
+    <string name="communication_style">Communication Style</string>
+    <string name="nationality">Nationality</string>
+    <string name="voice_selection">Voice</string>
+    <string name="haptic_intensity">Haptic Feedback Intensity</string>
+    <string name="screen_reader_verbosity">Screen Reader Verbosity</string>
+    <string name="vision_sensitivity">Vision Detection Sensitivity</string>
+    <string name="navigation_detail">Navigation Detail Level</string>
+    <string name="orbit_mode">Orbit Mode</string>
+    <string name="color_scheme">Color Scheme</string>
+
+    <!-- Communication styles -->
+    <string name="style_brief">Brief</string>
+    <string name="style_normal">Normal</string>
+    <string name="style_chatty">Chatty</string>
+
+    <!-- Verbosity levels -->
+    <string name="verbosity_minimal">Minimal</string>
+    <string name="verbosity_standard">Standard</string>
+    <string name="verbosity_detailed">Detailed</string>
+
+    <!-- Navigation levels -->
+    <string name="nav_minimal">Minimal</string>
+    <string name="nav_landmarks">Landmarks</string>
+    <string name="nav_full">Full Detail</string>
+
+    <!-- Color schemes -->
+    <string name="color_high_contrast">High Contrast</string>
+    <string name="color_standard">Standard</string>
+    <string name="color_custom">Custom</string>
+
+    <!-- Content descriptions for accessibility -->
+    <string name="desc_mic_button">Microphone button. Tap to start voice conversation with TapMate.</string>
+    <string name="desc_stop_button">Stop session button</string>
+    <string name="desc_mute_button">Mute microphone button</string>
+    <string name="desc_settings_button">Settings button</string>
+</resources>

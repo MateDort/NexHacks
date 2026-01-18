@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ALLY app inspired colors for accessibility -->
+    <color name="tapmate_orange">#FF6B35</color>
+    <color name="tapmate_blue">#004E89</color>
+    <color name="tapmate_dark_blue">#003256</color>
+
+    <!-- High contrast colors -->
+    <color name="high_contrast_bg">#000000</color>
+    <color name="high_contrast_fg">#FFFFFF</color>
+
+    <!-- Status colors -->
+    <color name="status_listening">#4CAF50</color>
+    <color name="status_processing">#FF9800</color>
+    <color name="status_error">#F44336</color>
+
+    <!-- Orbit mode colors -->
+    <color name="orbit_highlight">#00FF00</color>
+    <color name="orbit_background">#000000</color>
+
+    <!-- Crosswalk light colors -->
+    <color name="light_green">#00FF00</color>
+    <color name="light_red">#FF0000</color>
+    <color name="light_yellow">#FFFF00</color>
+
+    <!-- Standard material colors -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
