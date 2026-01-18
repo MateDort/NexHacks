@@ -17,8 +17,8 @@ public class GeminiClient {
     private static final String TAG = "GeminiClient";
     // Loaded from Config (sourced from .env)
     private static final String API_KEY = com.nexhacks.tapmate.utils.Config.GEMINI_API_KEY; 
-    // Using 1.5 Flash as proxy for 3/2.0 availability in standard endpoints
-    private static final String BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + API_KEY;
+    // Using Gemini 2.0 Flash Experimental
+    private static final String BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=" + API_KEY;
 
     private final OkHttpClient client;
 
@@ -61,26 +61,41 @@ public class GeminiClient {
                         String responseBody = response.body().string();
                         JSONObject json = new JSONObject(responseBody);
                         
-                        // Parse Gemini Response to find Function Call
-                        // Structure: candidates[0].content.parts[0].functionCall
+                        // Parse Gemini Response
+                        // Structure: candidates[0].content.parts[0].functionCall or .text
                         JSONObject candidate = json.getJSONArray("candidates").getJSONObject(0);
                         JSONObject content = candidate.getJSONObject("content");
                         JSONArray parts = content.getJSONArray("parts");
                         
-                        // Look for function call part
+                        // Look for function call first
                         for (int i = 0; i < parts.length(); i++) {
                             JSONObject part = parts.getJSONObject(i);
                             if (part.has("functionCall")) {
                                 JSONObject fn = part.getJSONObject("functionCall");
                                 String name = fn.getString("name");
-                                JSONObject args = fn.getJSONObject("args");
+                                JSONObject args = fn.optJSONObject("args");
+                                if (args == null) {
+                                    args = new JSONObject();
+                                }
                                 callback.onResponse(name, args);
                                 return;
                             }
                         }
                         
-                        // If no function call, maybe just text response (fallback)
-                        callback.onResponse("text_response", new JSONObject().put("text", "No action needed."));
+                        // If no function call, look for text response
+                        StringBuilder textResponse = new StringBuilder();
+                        for (int i = 0; i < parts.length(); i++) {
+                            JSONObject part = parts.getJSONObject(i);
+                            if (part.has("text")) {
+                                textResponse.append(part.getString("text"));
+                            }
+                        }
+                        
+                        if (textResponse.length() > 0) {
+                            callback.onResponse("text_response", new JSONObject().put("text", textResponse.toString()));
+                        } else {
+                            callback.onResponse("text_response", new JSONObject().put("text", "I understand."));
+                        }
 
                     } catch (Exception e) {
                         callback.onError(e);
@@ -99,9 +114,17 @@ public class GeminiClient {
         
         // 1. System Instruction & User Prompt
         JSONObject userPart = new JSONObject().put("text", 
-            "User Goal: " + userGoal + "\n" +
-            "Screen State: " + screenState + "\n" +
-            "You are an Android Accessibility Agent. Analyze the screen and call the correct tool.");
+            "You are TapMate, an Android Accessibility Agent that helps users control their phone through voice commands.\n\n" +
+            "User Request: " + userGoal + "\n\n" +
+            "Current Screen State (JSON): " + screenState + "\n\n" +
+            "Instructions:\n" +
+            "- Analyze the screen state to understand what's currently visible\n" +
+            "- If the user wants to interact with the screen (click, type, scroll), use the appropriate GUI function\n" +
+            "- If the user is asking a question or needs information, respond with text_response\n" +
+            "- When clicking, use the 'id' field from screen state nodes. If no ID, try using text or description\n" +
+            "- Always provide helpful feedback in your responses\n" +
+            "- If you need to save important information (like car details, ETAs), use memory_save\n\n" +
+            "Now analyze the request and call the appropriate function:");
             
         JSONArray contents = new JSONArray().put(new JSONObject()
             .put("role", "user")

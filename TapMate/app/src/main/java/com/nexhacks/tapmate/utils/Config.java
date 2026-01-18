@@ -31,6 +31,15 @@ public class Config {
                     switch (key) {
                         case "GEMINI_API_KEY":
                             GEMINI_API_KEY = value;
+                            // #region agent log
+                            try {
+                                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " Config.loadEnv:API_KEY_LOADED " + 
+                                    "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"F\",\"location\":\"Config.java:loadEnv\",\"message\":\"API key loaded\",\"data\":{\"keyLength\":" + 
+                                    value.length() + ",\"keyEmpty\":" + value.isEmpty() + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                                fw.close();
+                            } catch (Exception e) {}
+                            // #endregion
                             break;
                         case "OVERSHOOT_API_KEY":
                             OVERSHOOT_API_KEY = value;

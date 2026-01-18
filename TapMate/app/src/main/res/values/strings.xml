@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">TapMate</string>
+    <string name="accessibility_service_description">TapMate AI Assistant for the Visually Impaired.</string>
+</resources>

@@ -107,10 +107,26 @@ public class TapMateAccessibilityService extends AccessibilityService {
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return false;
 
-        List<AccessibilityNodeInfo> nodes = root.findAccessibilityNodeInfosByViewId(viewId);
-        if (nodes != null && !nodes.isEmpty()) {
-            return nodes.get(0).performAction(AccessibilityNodeInfo.ACTION_CLICK);
+        // Try by view ID first
+        if (viewId != null && !viewId.isEmpty()) {
+            List<AccessibilityNodeInfo> nodes = root.findAccessibilityNodeInfosByViewId(viewId);
+            if (nodes != null && !nodes.isEmpty()) {
+                return nodes.get(0).performAction(AccessibilityNodeInfo.ACTION_CLICK);
+            }
         }
+        
+        // Fallback: try by text
+        if (viewId != null && !viewId.isEmpty()) {
+            List<AccessibilityNodeInfo> nodes = root.findAccessibilityNodeInfosByText(viewId);
+            if (nodes != null && !nodes.isEmpty()) {
+                for (AccessibilityNodeInfo node : nodes) {
+                    if (node.isClickable()) {
+                        return node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                    }
+                }
+            }
+        }
+        
         return false;
     }
 
@@ -118,13 +134,63 @@ public class TapMateAccessibilityService extends AccessibilityService {
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return false;
         
-        List<AccessibilityNodeInfo> nodes = root.findAccessibilityNodeInfosByViewId(viewId);
+        List<AccessibilityNodeInfo> nodes = null;
+        if (viewId != null && !viewId.isEmpty()) {
+            nodes = root.findAccessibilityNodeInfosByViewId(viewId);
+        }
+        
+        if (nodes == null || nodes.isEmpty()) {
+            // Try to find any editable field
+            nodes = root.findAccessibilityNodeInfosByText("");
+        }
+        
         if (nodes != null && !nodes.isEmpty()) {
-            // Usually requires setting arguments for SET_TEXT
-            // Simplified for prototype
-            return nodes.get(0).performAction(AccessibilityNodeInfo.ACTION_FOCUS); 
+            for (AccessibilityNodeInfo node : nodes) {
+                if (node.isEditable()) {
+                    // Focus first
+                    node.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
+                    
+                    // Set text using arguments
+                    android.os.Bundle arguments = new android.os.Bundle();
+                    arguments.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
+                    return node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments);
+                }
+            }
         }
         return false;
+    }
+
+    public boolean performScroll(String direction) {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return false;
+        
+        // Find scrollable nodes
+        List<AccessibilityNodeInfo> scrollableNodes = new java.util.ArrayList<>();
+        findScrollableNodes(root, scrollableNodes);
+        
+        if (scrollableNodes.isEmpty()) return false;
+        
+        int action = direction.equalsIgnoreCase("UP") 
+            ? AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD 
+            : AccessibilityNodeInfo.ACTION_SCROLL_FORWARD;
+        
+        return scrollableNodes.get(0).performAction(action);
+    }
+    
+    private void findScrollableNodes(AccessibilityNodeInfo node, List<AccessibilityNodeInfo> result) {
+        if (node == null) return;
+        
+        if (node.isScrollable()) {
+            result.add(node);
+        }
+        
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo child = node.getChild(i);
+            if (child != null) {
+                findScrollableNodes(child, result);
+                child.recycle();
+            }
+        }
     }
 
     // 3. Smart Extraction (For Memory)
