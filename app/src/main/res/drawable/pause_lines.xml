@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Two vertical lines (pause/mute icon) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    <path
+        android:fillColor="@color/effective_purple"
+        android:pathData="M 35,25 L 48,25 L 48,95 L 35,95 Z" />
+    <path
+        android:fillColor="@color/effective_purple"
+        android:pathData="M 72,25 L 85,25 L 85,95 L 72,95 Z" />
+</vector>

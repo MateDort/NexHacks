@@ -1,1 +1,9 @@
 .env
+local.properties
+*.iml
+.gradle
+.idea
+build/
+captures/
+.externalNativeBuild
+.cxx

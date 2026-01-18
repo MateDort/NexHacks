@@ -1,65 +1,139 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/high_contrast_bg"
+    android:id="@+id/main_container"
     tools:context=".ui.MainActivity">
 
-    <!-- Settings Button (Top Left) -->
-    <Button
-        android:id="@+id/btn_settings"
-        android:layout_width="80dp"
-        android:layout_height="80dp"
-        android:layout_margin="16dp"
-        android:text="⚙️"
-        android:textSize="32sp"
-        android:backgroundTint="@color/tapmate_blue"
-        android:contentDescription="@string/desc_settings_button"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+    <!-- IDLE STATE: Full-screen yellow button with purple triangle (start) -->
+    <LinearLayout
+        android:id="@+id/idle_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/effective_yellow"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:clickable="true"
+        android:focusable="true"
+        android:contentDescription="Tap anywhere to start TapMate session">
 
-    <!-- Status Text -->
+        <ImageView
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:src="@drawable/triangle_start"
+            android:contentDescription="Start button - Triangle icon" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tap to Start"
+            android:textSize="32sp"
+            android:textColor="@color/effective_purple"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Swipe right for settings"
+            android:textSize="18sp"
+            android:textColor="@color/effective_purple"
+            android:layout_marginTop="16dp"
+            android:alpha="0.8" />
+    </LinearLayout>
+
+    <!-- ACTIVE STATE: Stop and Mute buttons -->
+    <LinearLayout
+        android:id="@+id/active_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <!-- Top: Mute/Unmute button (yellow + purple) -->
+        <FrameLayout
+            android:id="@+id/btn_mute"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="@color/effective_yellow"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="Mute or unmute microphone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/mute_icon"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:src="@drawable/pause_lines"
+                    android:contentDescription="Mute icon - Two vertical lines" />
+
+                <TextView
+                    android:id="@+id/mute_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Mute"
+                    android:textSize="28sp"
+                    android:textColor="@color/effective_purple"
+                    android:textStyle="bold"
+                    android:layout_marginTop="16dp" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Bottom: Stop button (red + purple) -->
+        <FrameLayout
+            android:id="@+id/btn_stop"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="@color/not_effective_red"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="Stop TapMate session">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:src="@drawable/rectangle_stop"
+                    android:contentDescription="Stop icon - Rectangle" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Stop"
+                    android:textSize="28sp"
+                    android:textColor="@color/effective_purple"
+                    android:textStyle="bold"
+                    android:layout_marginTop="16dp" />
+            </LinearLayout>
+        </FrameLayout>
+    </LinearLayout>
+
+    <!-- Status indicator (always visible, top-right corner) -->
     <TextView
         android:id="@+id/tv_status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/tap_to_speak"
-        android:textSize="24sp"
-        android:textColor="@color/high_contrast_fg"
-        android:layout_marginTop="32dp"
-        app:layout_constraintTop_toBottomOf="@id/btn_settings"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:layout_gravity="top|end"
+        android:layout_margin="16dp"
+        android:text="Ready"
+        android:textSize="16sp"
+        android:textColor="@color/effective_purple"
+        android:background="@color/effective_yellow"
+        android:padding="12dp"
+        android:textStyle="bold" />
 
-    <!-- Large Microphone Button (75% of screen) -->
-    <Button
-        android:id="@+id/btn_mic"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_margin="32dp"
-        android:text="🎤"
-        android:textSize="120sp"
-        android:backgroundTint="@color/tapmate_orange"
-        android:contentDescription="@string/desc_mic_button"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_status"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintHeight_percent="0.75" />
-
-    <!-- App Name at Bottom -->
-    <TextView
-        android:id="@+id/tv_app_name"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/app_name"
-        android:textSize="20sp"
-        android:textColor="@color/tapmate_orange"
-        android:layout_marginBottom="16dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</FrameLayout>

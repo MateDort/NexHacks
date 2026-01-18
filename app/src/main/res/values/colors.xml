@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- ALLY app inspired colors for accessibility -->
+    <!-- Effective colors for visually impaired users -->
+    <!-- Yellow = Effective (high visibility) -->
+    <color name="effective_yellow">#F9CA24</color>
+
+    <!-- Purple/Blue = Effective accent -->
+    <color name="effective_purple">#5F5ACC</color>
+
+    <!-- Red = Not as effective (stop/caution) -->
+    <color name="not_effective_red">#E84545</color>
+
+    <!-- Orange = Not as effective accent -->
+    <color name="not_effective_orange">#F39C12</color>
+
+    <!-- Legacy colors (keep for compatibility) -->
     <color name="tapmate_orange">#FF6B35</color>
     <color name="tapmate_blue">#004E89</color>
     <color name="tapmate_dark_blue">#003256</color>

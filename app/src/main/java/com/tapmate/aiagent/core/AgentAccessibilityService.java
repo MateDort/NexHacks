@@ -120,8 +120,9 @@ public class AgentAccessibilityService extends AccessibilityService implements G
             }
 
             // Set text via accessibility
-            boolean success = focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
-                android.os.Bundle.forPair(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text));
+            android.os.Bundle bundle = new android.os.Bundle();
+            bundle.putString(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
+            boolean success = focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, bundle);
 
             focused.recycle();
             root.recycle();

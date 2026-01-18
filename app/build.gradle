@@ -15,16 +15,16 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        // Load API keys from .env file
-        def envFile = rootProject.file('../.env')
-        if (envFile.exists()) {
-            envFile.eachLine { line ->
-                def (key, value) = line.split('=', 2)
-                if (key && value) {
-                    buildConfigField "String", key, "\"${value}\""
-                }
-            }
-        }
+        // Add to BuildConfig
+        buildConfigField "String", "GEMINI_API_KEY", "\"AIzaSyCaoges4eK_cacmM-zdxT3cwBxk6bqNd2U\""
+        buildConfigField "String", "OVERSHOOT_API_KEY", "\"ovs_18b9793123a748d54d558a5adae9ff45\""
+        buildConfigField "String", "GOOGLE_CLOUD_API_KEY", "\"AIzaSyApBSos82KIQ3DyDlZ7o1Vz_TyTz2VlvEg\""
+        buildConfigField "String", "TRAINED_MODEL_ENDPOINT", "\"4152722377202991104\""
+
+        // Add to Manifest placeholders
+        manifestPlaceholders = [
+            GOOGLE_CLOUD_API_KEY: "AIzaSyApBSos82KIQ3DyDlZ7o1Vz_TyTz2VlvEg"
+        ]
     }
 
     buildTypes {
