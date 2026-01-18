@@ -59,4 +59,21 @@ public class Config {
             Log.e(TAG, "Failed to load env file from assets", e);
         }
     }
+    
+    // Getter methods for API keys
+    public static String getGeminiApiKey() {
+        return GEMINI_API_KEY;
+    }
+    
+    public static String getOvershootApiKey() {
+        return OVERSHOOT_API_KEY;
+    }
+    
+    public static String getMapsApiKey() {
+        return MAPS_API_KEY;
+    }
+    
+    public static String getGoogleCloudApiKey() {
+        return MAPS_API_KEY; // GOOGLE_CLOUD_API_KEY is stored in MAPS_API_KEY
+    }
 }

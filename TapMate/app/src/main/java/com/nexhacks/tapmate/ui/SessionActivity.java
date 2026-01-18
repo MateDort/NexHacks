@@ -30,6 +30,7 @@ import com.nexhacks.tapmate.agents.MemoryAgent;
 import com.nexhacks.tapmate.agents.SearchAgent;
 import com.nexhacks.tapmate.agents.NavigationAgent;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.concurrent.ExecutorService;
@@ -985,32 +986,88 @@ public class SessionActivity extends Activity {
     }
     
     private String performGoogleSearch(String query) {
-        // Simple Google Search API call (using Custom Search API would require API key)
-        // For now, return a placeholder - in production, use Google Custom Search API
         try {
             okhttp3.OkHttpClient client = new okhttp3.OkHttpClient();
-            String url = "https://www.googleapis.com/customsearch/v1?key=" + 
-                        com.nexhacks.tapmate.utils.Config.MAPS_API_KEY + 
-                        "&cx=YOUR_SEARCH_ENGINE_ID&q=" + 
-                        java.net.URLEncoder.encode(query, "UTF-8");
+            
+            // If query is about weather, use weather API
+            if (query.toLowerCase().contains("weather")) {
+                String location = query.toLowerCase()
+                    .replace("weather", "")
+                    .replace("in", "")
+                    .replace("what's", "")
+                    .replace("the", "")
+                    .replace("?", "")
+                    .trim();
+                
+                if (location.isEmpty()) {
+                    location = "current location";
+                }
+                
+                String url = "https://wttr.in/" + java.net.URLEncoder.encode(location, "UTF-8") + "?format=j1";
+                okhttp3.Request request = new okhttp3.Request.Builder()
+                    .url(url)
+                    .addHeader("User-Agent", "curl/7.64.1")
+                    .build();
+                
+                okhttp3.Response response = client.newCall(request).execute();
+                if (response.isSuccessful() && response.body() != null) {
+                    String body = response.body().string();
+                    JSONObject json = new JSONObject(body);
+                    
+                    JSONObject current = json.getJSONArray("current_condition").getJSONObject(0);
+                    String temp = current.getString("temp_F") + "°F (" + current.getString("temp_C") + "°C)";
+                    String condition = current.getJSONArray("weatherDesc").getJSONObject(0).getString("value");
+                    String humidity = current.getString("humidity") + "%";
+                    String windSpeed = current.getString("windspeedMiles") + " mph";
+                    
+                    return String.format("Weather in %s:\nTemperature: %s\nCondition: %s\nHumidity: %s\nWind: %s",
+                        location, temp, condition, humidity, windSpeed);
+                }
+            }
+            
+            // For general searches, use Gemini API to answer
+            String apiKey = com.nexhacks.tapmate.utils.Config.getGeminiApiKey();
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + apiKey;
+            
+            JSONObject requestBody = new JSONObject();
+            JSONArray contents = new JSONArray();
+            JSONObject content = new JSONObject();
+            JSONArray parts = new JSONArray();
+            JSONObject part = new JSONObject();
+            part.put("text", "Answer this question concisely in 2-3 sentences: " + query);
+            parts.put(part);
+            content.put("parts", parts);
+            contents.put(content);
+            requestBody.put("contents", contents);
             
             okhttp3.Request request = new okhttp3.Request.Builder()
                 .url(url)
+                .post(okhttp3.RequestBody.create(
+                    requestBody.toString(),
+                    okhttp3.MediaType.parse("application/json")))
                 .build();
             
             okhttp3.Response response = client.newCall(request).execute();
             if (response.isSuccessful() && response.body() != null) {
-                JSONObject json = new JSONObject(response.body().string());
-                // Parse search results
-                if (json.has("items") && json.getJSONArray("items").length() > 0) {
-                    JSONObject firstResult = json.getJSONArray("items").getJSONObject(0);
-                    return firstResult.optString("title", "") + ": " + firstResult.optString("snippet", "");
+                String body = response.body().string();
+                JSONObject json = new JSONObject(body);
+                JSONArray candidates = json.getJSONArray("candidates");
+                if (candidates.length() > 0) {
+                    JSONObject candidate = candidates.getJSONObject(0);
+                    JSONObject contentObj = candidate.getJSONObject("content");
+                    JSONArray partsArray = contentObj.getJSONArray("parts");
+                    if (partsArray.length() > 0) {
+                        return partsArray.getJSONObject(0).getString("text");
+                    }
                 }
             }
+            
+            return "I couldn't find information about: " + query;
+            
         } catch (Exception e) {
             Log.e(TAG, "Google Search error", e);
+            return "Search error: " + e.getMessage();
         }
-        return "Search completed for: " + query;
     }
     
     private boolean openApp(String appName) {

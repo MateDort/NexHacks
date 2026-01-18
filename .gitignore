@@ -1,0 +1,23 @@
+# Environment files
+.env
+**/assets/env
+TapMate/app/src/main/assets/env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Android
+*.apk
+*.ap_
+*.aab
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+
+# Logs
+*.log
+.cursor/debug.log
