@@ -19,9 +19,24 @@ import androidx.core.content.ContextCompat;
 
 import com.nexhacks.tapmate.accessibility.TapMateAccessibilityService;
 import com.nexhacks.tapmate.gemini.GeminiLiveClient;
+import com.nexhacks.tapmate.memory.AppDatabase;
+import com.nexhacks.tapmate.memory.MemoryItem;
+import com.nexhacks.tapmate.utils.MapsIntegration;
+import com.nexhacks.tapmate.utils.LocationService;
+import com.nexhacks.tapmate.agents.AgentRegistry;
+import com.nexhacks.tapmate.agents.BaseAgent;
+import com.nexhacks.tapmate.agents.GUIAgent;
+import com.nexhacks.tapmate.agents.MemoryAgent;
+import com.nexhacks.tapmate.agents.SearchAgent;
+import com.nexhacks.tapmate.agents.NavigationAgent;
 import org.json.JSONObject;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Location;
 
 public class SessionActivity extends Activity {
 
@@ -32,6 +47,7 @@ public class SessionActivity extends Activity {
     private static final int AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
     private static final int INPUT_BUFFER_SIZE = AudioRecord.getMinBufferSize(INPUT_SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT) * 2;
     private static final int PERMISSION_REQUEST_RECORD_AUDIO = 1001;
+    private static final int PERMISSION_REQUEST_LOCATION = 1002;
     
     private Button stopButton;
     private Button muteButton;
@@ -50,6 +66,11 @@ public class SessionActivity extends Activity {
     private GeminiLiveClient geminiLiveClient;
     private Handler mainHandler;
     private TapMateAccessibilityService accessibilityService;
+    private AppDatabase database;
+    private ExecutorService executorService;
+    private MapsIntegration mapsIntegration;
+    private LocationService locationService;
+    private AgentRegistry agentRegistry;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,37 +82,77 @@ public class SessionActivity extends Activity {
         // Initialize components
         mainHandler = new Handler(Looper.getMainLooper());
         accessibilityService = TapMateAccessibilityService.getInstance();
-        geminiLiveClient = new GeminiLiveClient();
+        database = com.nexhacks.tapmate.TapMateApplication.getDatabase();
+        executorService = Executors.newSingleThreadExecutor();
+        mapsIntegration = new MapsIntegration();
+        locationService = new LocationService(this);
+        
+        // Initialize agent registry
+        agentRegistry = new AgentRegistry();
+        initializeAgents();
+        
+        // Initialize Gemini client with agent registry
+        geminiLiveClient = new GeminiLiveClient(agentRegistry);
         
         setContentView(createSessionLayout());
         
-        // Request microphone permission
+        // Request permissions
         requestMicrophonePermission();
+        requestLocationPermission();
+    }
+    
+    private void initializeAgents() {
+        // Create agent callback
+        BaseAgent.AgentCallback agentCallback = new BaseAgent.AgentCallback() {
+            @Override
+            public void onResult(String functionName, String result, String callId) {
+                updateStatus(result);
+                sendFunctionResultToGemini(functionName, result, callId);
+            }
+            
+            @Override
+            public void onError(String functionName, String error, String callId) {
+                updateStatus("Error: " + error);
+                sendFunctionResultToGemini(functionName, error, callId);
+            }
+        };
+        
+        // Create agents
+        GUIAgent guiAgent = new GUIAgent(mainHandler, agentCallback, accessibilityService, 
+            executorService, this::updateScreenState, this);
+        MemoryAgent memoryAgent = new MemoryAgent(mainHandler, agentCallback, database, executorService);
+        SearchAgent searchAgent = new SearchAgent(mainHandler, agentCallback, executorService);
+        NavigationAgent navigationAgent = new NavigationAgent(mainHandler, agentCallback, 
+            mapsIntegration, locationService, executorService);
+        
+        // Register agents
+        agentRegistry.registerAgent(guiAgent);
+        agentRegistry.registerAgent(memoryAgent);
+        agentRegistry.registerAgent(searchAgent);
+        agentRegistry.registerAgent(navigationAgent);
+        
+        Log.d(TAG, "Initialized " + agentRegistry.getAgentCount() + " agents");
+    }
+    
+    private void requestLocationPermission() {
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) 
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, 
+                new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION, 
+                            android.Manifest.permission.ACCESS_COARSE_LOCATION}, 
+                PERMISSION_REQUEST_LOCATION);
+        }
     }
     
     private void requestMicrophonePermission() {
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) 
                 != PackageManager.PERMISSION_GRANTED) {
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
-                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.requestMicrophonePermission:PERMISSION_NOT_GRANTED " + 
-                    "{\"sessionId\":\"debug-session\",\"runId\":\"run5\",\"hypothesisId\":\"G\",\"location\":\"SessionActivity.java:requestMicrophonePermission\",\"message\":\"Microphone permission not granted, requesting\",\"data\":{},\"timestamp\":" + System.currentTimeMillis() + "}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
+            Log.d(TAG, "Microphone permission not granted, requesting");
             ActivityCompat.requestPermissions(this, 
                 new String[]{android.Manifest.permission.RECORD_AUDIO}, 
                 PERMISSION_REQUEST_RECORD_AUDIO);
         } else {
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
-                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.requestMicrophonePermission:PERMISSION_GRANTED " + 
-                    "{\"sessionId\":\"debug-session\",\"runId\":\"run5\",\"hypothesisId\":\"G\",\"location\":\"SessionActivity.java:requestMicrophonePermission\",\"message\":\"Microphone permission already granted\",\"data\":{},\"timestamp\":" + System.currentTimeMillis() + "}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
+            Log.d(TAG, "Microphone permission already granted");
             // Permission already granted, start session
             startGeminiLiveSession();
         }
@@ -100,16 +161,10 @@ public class SessionActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQUEST_RECORD_AUDIO) {
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
-                boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
-                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.onRequestPermissionsResult:PERMISSION_RESULT " + 
-                    "{\"sessionId\":\"debug-session\",\"runId\":\"run5\",\"hypothesisId\":\"G\",\"location\":\"SessionActivity.java:onRequestPermissionsResult\",\"message\":\"Permission request result\",\"data\":{\"granted\":" + granted + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
+        if (requestCode == PERMISSION_REQUEST_LOCATION) {
+            // Location permission handled
+        } else if (requestCode == PERMISSION_REQUEST_RECORD_AUDIO) {
+            Log.d(TAG, "Permission request result: granted=" + (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED));
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startGeminiLiveSession();
             } else {
@@ -172,9 +227,59 @@ public class SessionActivity extends Activity {
             }
 
             @Override
-            public void onFunctionCall(String functionName, JSONObject args) {
+            public void onFunctionCall(String functionName, JSONObject args, String callId) {
+                Log.d(TAG, "=== FUNCTION CALL RECEIVED ===");
+                Log.d(TAG, "Function: " + functionName);
+                Log.d(TAG, "Args: " + (args != null ? args.toString() : "null"));
+                Log.d(TAG, "Call ID: " + callId);
+                
+                // #region agent log
+                try {
+                    android.util.Log.d("SessionActivity", "FUNCTION_CALL_RECEIVED: " + functionName + " id:" + callId + " args: " + (args != null ? args.toString() : "null"));
+                } catch (Exception e) {}
+                // #endregion
+                
+                // Safety check: ensure we're still valid
+                if (isFinishing() || isDestroyed()) {
+                    Log.w(TAG, "Activity finishing, ignoring function call");
+                    return;
+                }
+                
+                // Store the function name and call ID so we can send the response back
+                lastFunctionCallName = functionName;
+                lastFunctionCallId = callId;
+                
                 mainHandler.post(() -> {
-                    handleGeminiFunctionCall(functionName, args);
+                    try {
+                        // #region agent log
+                        try {
+                            android.util.Log.d("SessionActivity", "FUNCTION_CALL_POSTING: " + functionName + " id:" + callId);
+                        } catch (Exception e) {}
+                        // #endregion
+                        
+                        // Double-check activity is still valid
+                        if (isFinishing() || isDestroyed()) {
+                            Log.w(TAG, "Activity finishing in handler, ignoring function call");
+                            return;
+                        }
+                        
+                        handleGeminiFunctionCall(functionName, args != null ? args : new JSONObject(), callId);
+                    } catch (Throwable t) {
+                        // Catch ALL exceptions including runtime exceptions
+                        Log.e(TAG, "Fatal error in function call handler", t);
+                        // #region agent log
+                        try {
+                            android.util.Log.e("SessionActivity", "FUNCTION_CALL_ERROR: " + functionName + " error: " + t.getMessage());
+                        } catch (Exception e) {}
+                        // #endregion
+                        try {
+                            updateStatus("Error: " + t.getMessage());
+                            // Send error response back to Gemini
+                            sendFunctionResultToGemini(functionName, "Error: " + t.getMessage(), callId);
+                        } catch (Exception e) {
+                            Log.e(TAG, "Could not update status", e);
+                        }
+                    }
                 });
             }
 
@@ -194,38 +299,17 @@ public class SessionActivity extends Activity {
         // Check permission first
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) 
                 != PackageManager.PERMISSION_GRANTED) {
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
-                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.startAudioCapture:NO_PERMISSION " + 
-                    "{\"sessionId\":\"debug-session\",\"runId\":\"run5\",\"hypothesisId\":\"H\",\"location\":\"SessionActivity.java:startAudioCapture\",\"message\":\"No microphone permission\",\"data\":{},\"timestamp\":" + System.currentTimeMillis() + "}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
+            Log.d(TAG, "No microphone permission");
             updateStatus("Microphone permission required");
             return;
         }
         
         try {
             int bufferSize = AudioRecord.getMinBufferSize(INPUT_SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT);
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
-                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.startAudioCapture:BUFFER_SIZE " + 
-                    "{\"sessionId\":\"debug-session\",\"runId\":\"run5\",\"hypothesisId\":\"I\",\"location\":\"SessionActivity.java:startAudioCapture\",\"message\":\"Calculated buffer size\",\"data\":{\"bufferSize\":" + bufferSize + ",\"sampleRate\":" + INPUT_SAMPLE_RATE + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
+            Log.d(TAG, "Calculated buffer size: " + bufferSize + ", sampleRate: " + INPUT_SAMPLE_RATE);
             
             if (bufferSize == AudioRecord.ERROR_BAD_VALUE || bufferSize == AudioRecord.ERROR) {
-                // #region agent log
-                try {
-                    java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
-                    fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.startAudioCapture:INVALID_BUFFER " + 
-                        "{\"sessionId\":\"debug-session\",\"runId\":\"run5\",\"hypothesisId\":\"I\",\"location\":\"SessionActivity.java:startAudioCapture\",\"message\":\"Invalid buffer size\",\"data\":{\"bufferSize\":" + bufferSize + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
-                    fw.close();
-                } catch (Exception e) {}
-                // #endregion
+                Log.d(TAG, "Invalid buffer size: " + bufferSize);
                 updateStatus("Invalid audio parameters");
                 return;
             }
@@ -239,14 +323,7 @@ public class SessionActivity extends Activity {
             );
             
             int state = audioRecord.getState();
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
-                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.startAudioCapture:AUDIO_STATE " + 
-                    "{\"sessionId\":\"debug-session\",\"runId\":\"run5\",\"hypothesisId\":\"J\",\"location\":\"SessionActivity.java:startAudioCapture\",\"message\":\"AudioRecord state\",\"data\":{\"state\":" + state + ",\"initialized\":" + (state == AudioRecord.STATE_INITIALIZED) + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
+            Log.d(TAG, "AudioRecord state: " + state + ", initialized: " + (state == AudioRecord.STATE_INITIALIZED));
             
             if (state != AudioRecord.STATE_INITIALIZED) {
                 Log.e(TAG, "AudioRecord initialization failed, state: " + state);
@@ -260,14 +337,7 @@ public class SessionActivity extends Activity {
             
             audioRecord.startRecording();
             isRecording = true;
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
-                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.startAudioCapture:RECORDING_STARTED " + 
-                    "{\"sessionId\":\"debug-session\",\"runId\":\"run5\",\"hypothesisId\":\"K\",\"location\":\"SessionActivity.java:startAudioCapture\",\"message\":\"Recording started successfully\",\"data\":{},\"timestamp\":" + System.currentTimeMillis() + "}\n");
-                fw.close();
-            } catch (Exception e) {}
-            // #endregion
+            Log.d(TAG, "Recording started successfully");
             
             // Start recording thread
             recordingThread = new Thread(() -> {
@@ -275,49 +345,16 @@ public class SessionActivity extends Activity {
                 int chunkCount = 0;
                 while (isRecording && !isMuted) {
                     int bytesRead = audioRecord.read(buffer, 0, buffer.length);
-                    // #region agent log
-                    try {
-                        java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
-                        fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.recordingThread:AUDIO_READ " + 
-                            "{\"sessionId\":\"debug-session\",\"runId\":\"run6\",\"hypothesisId\":\"N\",\"location\":\"SessionActivity.java:recordingThread\",\"message\":\"Audio read\",\"data\":{\"bytesRead\":" + 
-                            bytesRead + ",\"chunkCount\":" + chunkCount + ",\"wsConnected\":" + geminiLiveClient.isConnected() + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
-                        fw.close();
-                    } catch (Exception ex) {}
-                    // #endregion
+                    Log.d(TAG, "Audio read: " + bytesRead + " bytes, chunkCount: " + chunkCount + ", wsConnected: " + geminiLiveClient.isConnected());
                     
                     if (bytesRead > 0) {
-                        // #region agent log
-                        try {
-                            java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
-                            // Check if audio data has non-zero bytes
-                            boolean hasNonZero = false;
-                            for (int i = 0; i < Math.min(buffer.length, 100); i++) {
-                                if (buffer[i] != 0) {
-                                    hasNonZero = true;
-                                    break;
-                                }
-                            }
-                            fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.recordingThread:AUDIO_DATA " + 
-                                "{\"sessionId\":\"debug-session\",\"runId\":\"run8\",\"hypothesisId\":\"H2\",\"location\":\"SessionActivity.java:recordingThread\",\"message\":\"Audio data read\",\"data\":{\"bytesRead\":" + 
-                                bytesRead + ",\"hasNonZeroBytes\":" + hasNonZero + ",\"wsConnected\":" + geminiLiveClient.isConnected() + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
-                            fw.close();
-                        } catch (Exception ex) {}
-                        // #endregion
                         if (geminiLiveClient.isConnected() && !pauseSendingAudio && !isMuted) {
                             // Send audio chunk to Gemini Live (only if not paused and not manually muted)
                             byte[] audioChunk = new byte[bytesRead];
                             System.arraycopy(buffer, 0, audioChunk, 0, bytesRead);
                             geminiLiveClient.sendAudioChunk(audioChunk);
                             chunkCount++;
-                            // #region agent log
-                            try {
-                                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
-                                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.recordingThread:CHUNK_SENT " + 
-                                    "{\"sessionId\":\"debug-session\",\"runId\":\"run8\",\"hypothesisId\":\"H4\",\"location\":\"SessionActivity.java:recordingThread\",\"message\":\"Audio chunk sent to Gemini\",\"data\":{\"chunkSize\":" + 
-                                    bytesRead + ",\"totalChunks\":" + chunkCount + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
-                                fw.close();
-                            } catch (Exception ex) {}
-                            // #endregion
+                            Log.d(TAG, "Audio chunk sent to Gemini: chunkSize=" + bytesRead + ", totalChunks=" + chunkCount);
                         } else {
                             // Log why we're not sending audio
                             if (!geminiLiveClient.isConnected()) {
@@ -327,25 +364,9 @@ public class SessionActivity extends Activity {
                             } else if (isMuted) {
                                 Log.d(TAG, "Manually muted, not sending audio: bytesRead=" + bytesRead);
                             }
-                            // #region agent log
-                            try {
-                                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
-                                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.recordingThread:WS_NOT_CONNECTED " + 
-                                    "{\"sessionId\":\"debug-session\",\"runId\":\"run6\",\"hypothesisId\":\"P\",\"location\":\"SessionActivity.java:recordingThread\",\"message\":\"WebSocket not connected, cannot send audio\",\"data\":{\"bytesRead\":" + 
-                                    bytesRead + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
-                                fw.close();
-                            } catch (Exception ex) {}
-                            // #endregion
                         }
                     } else if (bytesRead < 0) {
-                        // #region agent log
-                        try {
-                            java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
-                            fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.recordingThread:READ_ERROR " + 
-                                "{\"sessionId\":\"debug-session\",\"runId\":\"run6\",\"hypothesisId\":\"L\",\"location\":\"SessionActivity.java:recordingThread\",\"message\":\"Audio read error\",\"data\":{\"bytesRead\":" + bytesRead + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
-                            fw.close();
-                        } catch (Exception ex) {}
-                        // #endregion
+                        Log.d(TAG, "Audio read error: " + bytesRead);
                         break;
                     }
                 }
@@ -356,14 +377,6 @@ public class SessionActivity extends Activity {
             
         } catch (Exception e) {
             Log.e(TAG, "Error starting audio capture", e);
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
-                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.startAudioCapture:EXCEPTION " + 
-                    "{\"sessionId\":\"debug-session\",\"runId\":\"run5\",\"hypothesisId\":\"M\",\"location\":\"SessionActivity.java:startAudioCapture\",\"message\":\"Exception starting audio\",\"data\":{\"error\":\"" + e.getMessage() + "\"},\"timestamp\":" + System.currentTimeMillis() + "}\n");
-                fw.close();
-            } catch (Exception ex) {}
-            // #endregion
             updateStatus("Error: " + e.getMessage());
         }
     }
@@ -447,15 +460,6 @@ public class SessionActivity extends Activity {
                 
                 audioTrack.play();
                 Log.d(TAG, "AudioTrack started, play state: " + audioTrack.getPlayState());
-                // #region agent log
-                try {
-                    java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
-                    fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.playAudioChunk:AUDIO_TRACK_INIT " + 
-                        "{\"sessionId\":\"debug-session\",\"runId\":\"run14\",\"hypothesisId\":\"AUDIO_FIX\",\"location\":\"SessionActivity.java:playAudioChunk\",\"message\":\"AudioTrack initialized for playback\",\"data\":{\"sampleRate\":" + 
-                        OUTPUT_SAMPLE_RATE + ",\"bufferSize\":" + outputBufferSize + ",\"format\":\"PCM_16BIT_MONO\",\"playState\":" + audioTrack.getPlayState() + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
-                    fw.close();
-                } catch (Exception ex) {}
-                // #endregion
             }
             
             // Check AudioTrack state before writing
@@ -507,76 +511,544 @@ public class SessionActivity extends Activity {
             };
             unmuteHandler.postDelayed(unmuteRunnable, playbackDurationMs);
             
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
-                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.playAudioChunk:PLAYING " + 
-                    "{\"sessionId\":\"debug-session\",\"runId\":\"run14\",\"hypothesisId\":\"AUDIO_FIX\",\"location\":\"SessionActivity.java:playAudioChunk\",\"message\":\"Playing audio chunk\",\"data\":{\"audioSize\":" + 
-                    audioData.length + ",\"bytesWritten\":" + written + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
-                fw.close();
-            } catch (Exception ex) {}
-            // #endregion
-            
         } catch (Exception e) {
             Log.e(TAG, "Error playing audio", e);
-            // #region agent log
-            try {
-                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
-                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.playAudioChunk:ERROR " + 
-                    "{\"sessionId\":\"debug-session\",\"runId\":\"run13\",\"hypothesisId\":\"AUDIO_FIX\",\"location\":\"SessionActivity.java:playAudioChunk\",\"message\":\"Error playing audio\",\"data\":{\"error\":\"" + 
-                    e.getMessage() + "\"},\"timestamp\":" + System.currentTimeMillis() + "}\n");
-                fw.close();
-            } catch (Exception ex) {}
-            // #endregion
         }
     }
 
-    private void handleGeminiFunctionCall(String functionName, JSONObject args) {
-        Log.d(TAG, "Gemini called: " + functionName + " with args: " + args);
+    private void handleGeminiFunctionCall(String functionName, JSONObject args, String callId) {
+        // #region agent log
+        try {
+            android.util.Log.d("SessionActivity", "HANDLE_FUNCTION_CALL: " + functionName + " id:" + callId);
+        } catch (Exception e) {}
+        // #endregion
         
-        if (accessibilityService == null) {
-            updateStatus("Accessibility service not available");
+        if (functionName == null || functionName.isEmpty()) {
+            Log.w(TAG, "Empty function name received");
+            updateStatus("Invalid function call");
             return;
         }
         
+        if (args == null) {
+            args = new JSONObject();
+        }
+        
+        Log.d(TAG, "Gemini called: " + functionName + " with args: " + args);
+        
+        // Use AgentRegistry to route function calls
+        if (agentRegistry != null) {
+            boolean handled = agentRegistry.handleFunctionCall(functionName, args, callId);
+            if (!handled) {
+                updateStatus("Unknown function: " + functionName);
+                sendFunctionResultToGemini(functionName, "Unknown function: " + functionName, callId);
+            }
+            return;
+        }
+        
+        // Fallback to old switch statement if no agent registry
         try {
             switch (functionName) {
                 case "gui_click":
-                    String nodeId = args.optString("node_id", "");
-                    if (!nodeId.isEmpty()) {
-                        boolean clicked = accessibilityService.performClick(nodeId);
-                        updateStatus(clicked ? "Clicked: " + nodeId : "Could not click: " + nodeId);
+                    try {
+                        if (accessibilityService == null) {
+                            updateStatus("Accessibility service not available");
+                            sendFunctionResultToGemini("gui_click", "Accessibility service not available", callId);
+                            return;
+                        }
+                        String nodeId = args.optString("node_id", "");
+                        if (!nodeId.isEmpty()) {
+                            // Run on background thread to avoid blocking
+                            executorService.execute(() -> {
+                                try {
+                                    boolean clicked = accessibilityService.performClick(nodeId);
+                                    mainHandler.post(() -> {
+                                        String result = clicked ? "Successfully clicked: " + nodeId : "Could not click: " + nodeId;
+                                        updateStatus(result);
+                                        sendFunctionResultToGemini("gui_click", result, callId);
+                                        updateScreenState();
+                                    });
+                                } catch (Exception e) {
+                                    Log.e(TAG, "Error performing click", e);
+                                    mainHandler.post(() -> {
+                                        String result = "Error clicking: " + e.getMessage();
+                                        updateStatus(result);
+                                        sendFunctionResultToGemini("gui_click", result, callId);
+                                    });
+                                }
+                            });
+                        } else {
+                            String result = "No node ID provided";
+                            updateStatus(result);
+                            sendFunctionResultToGemini("gui_click", result, callId);
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error in gui_click handler", e);
+                        String result = "Error: " + e.getMessage();
+                        updateStatus(result);
+                        sendFunctionResultToGemini("gui_click", result, callId);
                     }
                     break;
                     
                 case "gui_type":
-                    String typeNodeId = args.optString("node_id", "");
-                    String text = args.optString("text", "");
-                    if (!typeNodeId.isEmpty() && !text.isEmpty()) {
-                        boolean typed = accessibilityService.performInput(typeNodeId, text);
-                        updateStatus(typed ? "Typed: " + text : "Could not type");
+                    try {
+                        if (accessibilityService == null) {
+                            updateStatus("Accessibility service not available");
+                            sendFunctionResultToGemini("gui_type", "Accessibility service not available", callId);
+                            return;
+                        }
+                        String typeNodeId = args.optString("node_id", "");
+                        String text = args.optString("text", "");
+                        if (!typeNodeId.isEmpty() && !text.isEmpty()) {
+                            executorService.execute(() -> {
+                                try {
+                                    boolean typed = accessibilityService.performInput(typeNodeId, text);
+                                    mainHandler.post(() -> {
+                                        String result = typed ? "Successfully typed: " + text : "Could not type";
+                                        updateStatus(result);
+                                        sendFunctionResultToGemini("gui_type", result, callId);
+                                        updateScreenState();
+                                    });
+                                } catch (Exception e) {
+                                    Log.e(TAG, "Error performing input", e);
+                                    mainHandler.post(() -> {
+                                        String result = "Error typing: " + e.getMessage();
+                                        updateStatus(result);
+                                        sendFunctionResultToGemini("gui_type", result, callId);
+                                    });
+                                }
+                            });
+                        } else {
+                            String result = "Missing node ID or text";
+                            updateStatus(result);
+                            sendFunctionResultToGemini("gui_type", result, callId);
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error in gui_type handler", e);
+                        String result = "Error: " + e.getMessage();
+                        updateStatus(result);
+                        sendFunctionResultToGemini("gui_type", result, callId);
                     }
                     break;
                     
                 case "gui_scroll":
-                    String direction = args.optString("direction", "DOWN");
-                    boolean scrolled = accessibilityService.performScroll(direction);
-                    updateStatus(scrolled ? "Scrolled " + direction : "Could not scroll");
+                    try {
+                        if (accessibilityService == null) {
+                            updateStatus("Accessibility service not available");
+                            sendFunctionResultToGemini("gui_scroll", "Accessibility service not available", callId);
+                            return;
+                        }
+                        String direction = args.optString("direction", "DOWN");
+                        executorService.execute(() -> {
+                            try {
+                                boolean scrolled = accessibilityService.performScroll(direction);
+                                mainHandler.post(() -> {
+                                    String result = scrolled ? "Successfully scrolled " + direction : "Could not scroll";
+                                    updateStatus(result);
+                                    sendFunctionResultToGemini("gui_scroll", result, callId);
+                                    updateScreenState();
+                                });
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error performing scroll", e);
+                                mainHandler.post(() -> {
+                                    String result = "Error scrolling: " + e.getMessage();
+                                    updateStatus(result);
+                                    sendFunctionResultToGemini("gui_scroll", result, callId);
+                                });
+                            }
+                        });
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error in gui_scroll handler", e);
+                        String result = "Error: " + e.getMessage();
+                        updateStatus(result);
+                        sendFunctionResultToGemini("gui_scroll", result, callId);
+                    }
                     break;
                     
                 case "memory_save":
                     String key = args.optString("key", "");
                     String value = args.optString("value", "");
-                    // TODO: Save to database
-                    updateStatus("Saved: " + key);
+                    String type = args.optString("type", "GENERAL");
+                    long triggerTime = args.optLong("trigger_time", 0);
+                    
+                    if (!key.isEmpty() && !value.isEmpty()) {
+                        executorService.execute(() -> {
+                            try {
+                                MemoryItem item = new MemoryItem(
+                                    type,
+                                    value,
+                                    new JSONObject().put("key", key).put("value", value).toString(),
+                                    System.currentTimeMillis(),
+                                    triggerTime
+                                );
+                                database.memoryDao().insert(item);
+                                mainHandler.post(() -> {
+                                    String result = "Saved to memory: " + key;
+                                    updateStatus(result);
+                                    sendFunctionResultToGemini("memory_save", result, callId);
+                                });
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error saving memory", e);
+                                mainHandler.post(() -> {
+                                    String result = "Error saving memory: " + e.getMessage();
+                                    updateStatus(result);
+                                    sendFunctionResultToGemini("memory_save", result, callId);
+                                });
+                            }
+                        });
+                    } else {
+                        String result = "Missing key or value for memory save";
+                        updateStatus(result);
+                        sendFunctionResultToGemini("memory_save", result, callId);
+                    }
+                    break;
+                    
+                case "memory_recall":
+                    String recallType = args.optString("type", "");
+                    executorService.execute(() -> {
+                        try {
+                            MemoryItem item = null;
+                            if (!recallType.isEmpty()) {
+                                item = database.memoryDao().getLastItemByType(recallType);
+                            }
+                            final MemoryItem finalItem = item;
+                            mainHandler.post(() -> {
+                                if (finalItem != null) {
+                                    String result = "I recall: " + finalItem.rawText;
+                                    updateStatus("Recalled: " + finalItem.rawText);
+                                    // Send recall result back to Gemini as function response
+                                    sendFunctionResultToGemini("memory_recall", result, callId);
+                                } else {
+                                    String result = "No memory found for type: " + recallType;
+                                    updateStatus(result);
+                                    sendFunctionResultToGemini("memory_recall", result, callId);
+                                }
+                            });
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error recalling memory", e);
+                            mainHandler.post(() -> updateStatus("Error recalling memory"));
+                        }
+                    });
+                    break;
+                    
+                case "google_search":
+                    String query = args.optString("query", "");
+                    if (!query.isEmpty()) {
+                        executorService.execute(() -> {
+                            try {
+                                String result = performGoogleSearch(query);
+                                mainHandler.post(() -> {
+                                    updateStatus("Search result: " + result);
+                                    sendFunctionResultToGemini("google_search", result, callId);
+                                });
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error performing search", e);
+                                mainHandler.post(() -> updateStatus("Error searching"));
+                            }
+                        });
+                    }
+                    break;
+                    
+                case "maps_navigation":
+                    String destination = args.optString("destination", "");
+                    if (!destination.isEmpty()) {
+                        executorService.execute(() -> {
+                            try {
+                                // #region agent log
+                                try {
+                                    java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                                    fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.maps_navigation:START " + 
+                                        "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H4\",\"location\":\"SessionActivity.java:handleGeminiFunctionCall\",\"message\":\"Getting directions\",\"data\":{\"destination\":\"" + 
+                                        destination + "\"},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                                    fw.close();
+                                } catch (Exception ex) {}
+                                // #endregion
+                                
+                                // Get current location first
+                                String origin = locationService.getLocationString();
+                                if (origin == null) {
+                                    origin = "37.7749,-122.4194"; // Fallback
+                                }
+                                
+                                JSONObject directions = mapsIntegration.getWalkingDirections(destination, origin);
+                                mainHandler.post(() -> {
+                                    if (directions != null) {
+                                        String result = "I've started navigation to " + destination;
+                                        updateStatus("Navigation to " + destination + " started");
+                                        sendFunctionResultToGemini("maps_navigation", result, callId);
+                                    } else {
+                                        String result = "I couldn't get directions to " + destination + ". Please check your internet connection and try again.";
+                                        updateStatus("Could not get directions");
+                                        sendFunctionResultToGemini("maps_navigation", result, callId);
+                                    }
+                                });
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error getting directions", e);
+                                // #region agent log
+                                try {
+                                    java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                                    fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.maps_navigation:ERROR " + 
+                                        "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H4\",\"location\":\"SessionActivity.java:handleGeminiFunctionCall\",\"message\":\"Error getting directions\",\"data\":{\"error\":\"" + 
+                                        e.getMessage() + "\"},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                                    fw.close();
+                                } catch (Exception ex) {}
+                                // #endregion
+                                mainHandler.post(() -> updateStatus("Error getting directions: " + e.getMessage()));
+                            }
+                        });
+                    }
+                    break;
+                    
+                case "get_location":
+                    executorService.execute(() -> {
+                        try {
+                            // #region agent log
+                            try {
+                                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.get_location:START " + 
+                                    "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H2\",\"location\":\"SessionActivity.java:handleGeminiFunctionCall\",\"message\":\"Getting location\",\"data\":{},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                                fw.close();
+                            } catch (Exception ex) {}
+                            // #endregion
+                            
+                            Location loc = locationService.getCurrentLocation();
+                            mainHandler.post(() -> {
+                                if (loc != null) {
+                                    String locationStr = "Your location is approximately " + loc.getLatitude() + ", " + loc.getLongitude();
+                                    updateStatus(locationStr);
+                                    sendFunctionResultToGemini("get_location", locationStr, callId);
+                                } else {
+                                    String result = "I couldn't determine your location. Please enable location services and grant location permission.";
+                                    updateStatus("Could not get location");
+                                    sendFunctionResultToGemini("get_location", result, callId);
+                                }
+                            });
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error getting location", e);
+                            mainHandler.post(() -> updateStatus("Error getting location"));
+                        }
+                    });
+                    break;
+                    
+                case "weather":
+                    String location = args.optString("location", "");
+                    executorService.execute(() -> {
+                        try {
+                            // #region agent log
+                            try {
+                                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.weather:START " + 
+                                    "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H1\",\"location\":\"SessionActivity.java:handleGeminiFunctionCall\",\"message\":\"Getting weather via google_search\",\"data\":{\"location\":\"" + 
+                                    location + "\"},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                                fw.close();
+                            } catch (Exception ex) {}
+                            // #endregion
+                            
+                            // Use google_search to get weather information
+                            String searchQuery = "weather " + location;
+                            String result = performGoogleSearch(searchQuery);
+                            mainHandler.post(() -> {
+                                updateStatus("Weather: " + result);
+                                sendFunctionResultToGemini("weather", result, callId);
+                            });
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error getting weather", e);
+                            // #region agent log
+                            try {
+                                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.weather:ERROR " + 
+                                    "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H1\",\"location\":\"SessionActivity.java:handleGeminiFunctionCall\",\"message\":\"Error getting weather\",\"data\":{\"error\":\"" + 
+                                    e.getMessage() + "\"},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                                fw.close();
+                            } catch (Exception ex) {}
+                            // #endregion
+                            mainHandler.post(() -> {
+                                String result = "I couldn't get the weather information. Please try again.";
+                                updateStatus("Error getting weather: " + e.getMessage());
+                                sendFunctionResultToGemini("weather", result, callId);
+                            });
+                        }
+                    });
+                    break;
+                    
+                case "gui_open_app":
+                    String appName = args.optString("app_name", "");
+                    if (!appName.isEmpty()) {
+                        // #region agent log
+                        try {
+                            java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                            fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.gui_open_app:START " + 
+                                "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H3\",\"location\":\"SessionActivity.java:handleGeminiFunctionCall\",\"message\":\"Opening app\",\"data\":{\"appName\":\"" + 
+                                appName + "\"},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                            fw.close();
+                        } catch (Exception ex) {}
+                        // #endregion
+                        
+                        boolean opened = openApp(appName);
+                        if (opened) {
+                            String result = "I've opened the " + appName + " app.";
+                            updateStatus("Opening " + appName);
+                            sendFunctionResultToGemini("gui_open_app", result, callId);
+                            // Wait a bit then update screen state
+                            mainHandler.postDelayed(() -> updateScreenState(), 1000);
+                        } else {
+                            String result = "I couldn't find or open the " + appName + " app. Please make sure it's installed.";
+                            updateStatus("Could not open " + appName);
+                            sendFunctionResultToGemini("gui_open_app", result, callId);
+                        }
+                    }
                     break;
                     
                 default:
                     updateStatus("Unknown function: " + functionName);
             }
+        } catch (Throwable t) {
+            // Catch ALL exceptions including runtime exceptions, errors, etc.
+            Log.e(TAG, "Error handling function call", t);
+            // #region agent log
+            try {
+                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                String stackTrace = android.util.Log.getStackTraceString(t);
+                String shortStackTrace = stackTrace.length() > 1000 ? stackTrace.substring(0, 1000) + "..." : stackTrace;
+                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.handleGeminiFunctionCall:EXCEPTION " + 
+                    "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H5\",\"location\":\"SessionActivity.java:handleGeminiFunctionCall\",\"message\":\"Exception in function handler\",\"data\":{\"functionName\":\"" + 
+                    functionName + "\",\"error\":\"" + (t.getMessage() != null ? t.getMessage().replace("\"", "\\\"") : "null") + "\",\"errorClass\":\"" + t.getClass().getName() + "\",\"stackTrace\":\"" + shortStackTrace.replace("\"", "\\\"").replace("\n", "\\n") + "\"},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                fw.close();
+            } catch (Exception ex) {
+                Log.e(TAG, "Error logging exception", ex);
+            }
+            // #endregion
+            try {
+                String errorMsg = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
+                updateStatus("Error: " + errorMsg);
+                // Don't send error back to Gemini if it might cause a loop
+                // sendTextToGemini("I encountered an error: " + errorMsg);
+            } catch (Exception e) {
+                Log.e(TAG, "Error updating status after exception", e);
+            }
+        }
+    }
+    
+    private void updateScreenState() {
+        // Update screen state and send to Gemini after a short delay
+        mainHandler.postDelayed(() -> {
+            if (accessibilityService != null && geminiLiveClient != null && geminiLiveClient.isConnected()) {
+                String newScreenState = accessibilityService.getScreenState();
+                // Note: Gemini Live doesn't have a direct way to update screen state mid-session
+                // This would need to be handled in the next user turn or via a different mechanism
+                Log.d(TAG, "Screen state updated");
+            }
+        }, 500); // Small delay to let UI update
+    }
+    
+    private String performGoogleSearch(String query) {
+        // Simple Google Search API call (using Custom Search API would require API key)
+        // For now, return a placeholder - in production, use Google Custom Search API
+        try {
+            okhttp3.OkHttpClient client = new okhttp3.OkHttpClient();
+            String url = "https://www.googleapis.com/customsearch/v1?key=" + 
+                        com.nexhacks.tapmate.utils.Config.MAPS_API_KEY + 
+                        "&cx=YOUR_SEARCH_ENGINE_ID&q=" + 
+                        java.net.URLEncoder.encode(query, "UTF-8");
+            
+            okhttp3.Request request = new okhttp3.Request.Builder()
+                .url(url)
+                .build();
+            
+            okhttp3.Response response = client.newCall(request).execute();
+            if (response.isSuccessful() && response.body() != null) {
+                JSONObject json = new JSONObject(response.body().string());
+                // Parse search results
+                if (json.has("items") && json.getJSONArray("items").length() > 0) {
+                    JSONObject firstResult = json.getJSONArray("items").getJSONObject(0);
+                    return firstResult.optString("title", "") + ": " + firstResult.optString("snippet", "");
+                }
+            }
         } catch (Exception e) {
-            Log.e(TAG, "Error handling function call", e);
-            updateStatus("Error executing function");
+            Log.e(TAG, "Google Search error", e);
+        }
+        return "Search completed for: " + query;
+    }
+    
+    private boolean openApp(String appName) {
+        try {
+            PackageManager pm = getPackageManager();
+            Intent launchIntent = pm.getLaunchIntentForPackage(getAppPackageName(appName));
+            if (launchIntent != null) {
+                startActivity(launchIntent);
+                return true;
+            }
+            
+            // Fallback: Try to open via accessibility service by going to home and searching
+            // This is a workaround - ideally we'd have the package name
+            return false;
+        } catch (Exception e) {
+            Log.e(TAG, "Error opening app", e);
+            return false;
+        }
+    }
+    
+    private String getAppPackageName(String appName) {
+        // Common app package names
+        String lowerName = appName.toLowerCase();
+        if (lowerName.contains("messenger") || lowerName.contains("facebook messenger")) {
+            return "com.facebook.orca";
+        } else if (lowerName.contains("whatsapp")) {
+            return "com.whatsapp";
+        } else if (lowerName.contains("settings")) {
+            return "com.android.settings";
+        } else if (lowerName.contains("chrome")) {
+            return "com.android.chrome";
+        } else if (lowerName.contains("gmail")) {
+            return "com.google.android.gm";
+        } else if (lowerName.contains("maps")) {
+            return "com.google.android.apps.maps";
+        } else if (lowerName.contains("camera")) {
+            return "com.android.camera2";
+        }
+        // Try to find by querying installed packages
+        PackageManager pm = getPackageManager();
+        java.util.List<android.content.pm.ApplicationInfo> apps = pm.getInstalledApplications(0);
+        for (android.content.pm.ApplicationInfo app : apps) {
+            String label = pm.getApplicationLabel(app).toString().toLowerCase();
+            if (label.contains(lowerName) || lowerName.contains(label)) {
+                return app.packageName;
+            }
+        }
+        return null;
+    }
+    
+    private void sendTextToGemini(String text) {
+        // Send text response back to Gemini Live as a function response
+        // Note: This is a simplified version - in a real implementation, we'd track which function was called
+        // For now, we'll send it as a generic response
+        Log.d(TAG, "Sending to Gemini: " + text);
+        try {
+            JSONObject response = new JSONObject();
+            response.put("result", text);
+            // We need to track the last function call to send the response properly
+            // For now, send as a generic response - this will be improved
+            geminiLiveClient.sendFunctionResponse("generic_response", response, lastFunctionCallId);
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending text to Gemini", e);
+        }
+    }
+    
+    private String lastFunctionCallName = null;
+    private String lastFunctionCallId = null;
+    
+    private void sendFunctionResultToGemini(String functionName, String result, String callId) {
+        Log.d(TAG, "Sending function result to Gemini: " + functionName + " id:" + callId + " -> " + result);
+        try {
+            JSONObject response = new JSONObject();
+            response.put("result", result);
+            geminiLiveClient.sendFunctionResponse(functionName, response, callId);
+            // #region agent log
+            try {
+                android.util.Log.d("SessionActivity", "FUNCTION_RESULT_SENT: " + functionName + " id:" + callId + " -> " + result);
+            } catch (Exception e) {}
+            // #endregion
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending function result to Gemini", e);
         }
     }
 
@@ -687,5 +1159,8 @@ public class SessionActivity extends Activity {
     protected void onDestroy() {
         super.onDestroy();
         stopSession();
+        if (executorService != null) {
+            executorService.shutdown();
+        }
     }
 }

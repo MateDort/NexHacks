@@ -27,20 +27,62 @@ public class MapsIntegration {
     private final OkHttpClient client = new OkHttpClient();
 
     // 1. Get Walking Directions (Brain Tool)
-    public JSONObject getWalkingDirections(String destination) {
-        // In a real app, uses Places API to get LatLng from "Walmart", then Directions API
-        // For hackathon, we simulate a response or call the real endpoint
-        String url = "https://maps.googleapis.com/maps/api/directions/json?origin=current_location&destination=" 
-                     + destination + "&mode=walking&key=" + API_KEY;
-        
+    public JSONObject getWalkingDirections(String destination, String origin) {
         try {
+            // First, try to get place details using Places API Text Search
+            String placesUrl = "https://maps.googleapis.com/maps/api/place/textsearch/json?query=" 
+                             + java.net.URLEncoder.encode(destination, "UTF-8") 
+                             + "&key=" + API_KEY;
+            
+            Request placesRequest = new Request.Builder().url(placesUrl).build();
+            Response placesResponse = client.newCall(placesRequest).execute();
+            
+            String destCoords = null;
+            if (placesResponse.isSuccessful() && placesResponse.body() != null) {
+                JSONObject placesJson = new JSONObject(placesResponse.body().string());
+                if (placesJson.has("results") && placesJson.getJSONArray("results").length() > 0) {
+                    JSONObject firstResult = placesJson.getJSONArray("results").getJSONObject(0);
+                    JSONObject location = firstResult.getJSONObject("geometry").getJSONObject("location");
+                    destCoords = location.getDouble("lat") + "," + location.getDouble("lng");
+                }
+            }
+            
+            // If Places API didn't work, try using destination as-is (might be coordinates or address)
+            if (destCoords == null) {
+                destCoords = destination;
+            }
+            
+            // Get directions using Directions API
+            String originCoords = origin != null ? origin : "37.7749,-122.4194"; // Fallback to SF if no origin
+            String url = "https://maps.googleapis.com/maps/api/directions/json?origin=" 
+                         + java.net.URLEncoder.encode(originCoords, "UTF-8")
+                         + "&destination=" + java.net.URLEncoder.encode(destCoords, "UTF-8")
+                         + "&mode=walking&key=" + API_KEY;
+            
             Request request = new Request.Builder().url(url).build();
             Response response = client.newCall(request).execute();
             if (response.isSuccessful() && response.body() != null) {
-                return new JSONObject(response.body().string());
+                String responseBody = response.body().string();
+                JSONObject result = new JSONObject(responseBody);
+                if (result.has("routes") && result.getJSONArray("routes").length() > 0) {
+                    return result;
+                } else if (result.has("error_message")) {
+                    Log.e(TAG, "Directions API error: " + result.getString("error_message"));
+                }
+            } else {
+                Log.e(TAG, "Directions API HTTP error: " + (response != null ? response.code() : "null"));
             }
         } catch (Exception e) {
             Log.e(TAG, "Error fetching directions", e);
+            // #region agent log
+            try {
+                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " MapsIntegration.getWalkingDirections:ERROR " + 
+                    "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H4\",\"location\":\"MapsIntegration.java:getWalkingDirections\",\"message\":\"Error in directions\",\"data\":{\"error\":\"" + 
+                    e.getMessage() + "\"},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                fw.close();
+            } catch (Exception ex) {}
+            // #endregion
         }
         return null;
     }

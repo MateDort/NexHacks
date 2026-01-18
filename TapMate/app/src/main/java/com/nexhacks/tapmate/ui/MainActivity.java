@@ -11,6 +11,7 @@ import android.widget.RelativeLayout;
 public class MainActivity extends Activity {
 
     private Button micButton;
+    private Button settingsButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,7 +49,30 @@ public class MainActivity extends Activity {
             startActivity(intent);
         });
 
+        // Create Settings Button (top left corner)
+        settingsButton = new Button(this);
+        settingsButton.setText("⚙️");
+        settingsButton.setTextSize(30);
+        settingsButton.setBackgroundColor(0xFF757575); // Gray color
+        settingsButton.setAllCaps(false);
+        
+        RelativeLayout.LayoutParams settingsParams = new RelativeLayout.LayoutParams(
+            (int) (screenWidth * 0.15f),
+            (int) (screenHeight * 0.1f)
+        );
+        settingsParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+        settingsParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+        settingsParams.setMargins(20, 20, 0, 0);
+        settingsButton.setLayoutParams(settingsParams);
+        
+        settingsButton.setOnClickListener(v -> {
+            // TODO: Open settings activity or dialog
+            // For now, just show a toast or placeholder
+            android.widget.Toast.makeText(this, "Settings (coming soon)", android.widget.Toast.LENGTH_SHORT).show();
+        });
+
         layout.addView(micButton);
+        layout.addView(settingsButton);
 
         return layout;
     }

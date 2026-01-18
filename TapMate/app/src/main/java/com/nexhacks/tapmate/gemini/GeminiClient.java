@@ -123,7 +123,14 @@ public class GeminiClient {
             "- If the user is asking a question or needs information, respond with text_response\n" +
             "- When clicking, use the 'id' field from screen state nodes. If no ID, try using text or description\n" +
             "- Always provide helpful feedback in your responses\n" +
-            "- If you need to save important information (like car details, ETAs), use memory_save\n\n" +
+            "- If you need to save important information (like car details, ETAs), use memory_save\n" +
+            "- Use memory_recall to retrieve saved information when needed\n" +
+            "- Use google_search to find information on the web\n" +
+            "- Use maps_navigation to get directions to a location\n" +
+            "- Use get_location to find out where the user is\n" +
+            "- Use weather to get weather information for any location (it uses Google Search internally)\n" +
+            "- Alternatively, you can use google_search directly for weather queries\n" +
+            "- If the user asks to open an app that's NOT on the current screen, use gui_open_app to launch it\n\n" +
             "Now analyze the request and call the appropriate function:");
             
         JSONArray contents = new JSONArray().put(new JSONObject()
@@ -183,8 +190,77 @@ public class GeminiClient {
                 .put("properties", new JSONObject()
                     .put("key", new JSONObject().put("type", "STRING"))
                     .put("value", new JSONObject().put("type", "STRING"))
+                    .put("type", new JSONObject().put("type", "STRING").put("description", "Type of memory: UBER_RIDE, LOCATION, REMINDER, etc."))
+                    .put("trigger_time", new JSONObject().put("type", "NUMBER").put("description", "Unix timestamp when to recall this memory (optional)"))
                 )
                 .put("required", new JSONArray().put("key").put("value"))
+            ));
+            
+        // Tool: Memory Recall
+        funcs.put(new JSONObject()
+            .put("name", "memory_recall")
+            .put("description", "Recall saved information from memory by type.")
+            .put("parameters", new JSONObject()
+                .put("type", "OBJECT")
+                .put("properties", new JSONObject()
+                    .put("type", new JSONObject().put("type", "STRING").put("description", "Type of memory to recall: UBER_RIDE, LOCATION, REMINDER, etc."))
+                )
+                .put("required", new JSONArray().put("type"))
+            ));
+            
+        // Tool: Google Search
+        funcs.put(new JSONObject()
+            .put("name", "google_search")
+            .put("description", "Search Google for information.")
+            .put("parameters", new JSONObject()
+                .put("type", "OBJECT")
+                .put("properties", new JSONObject()
+                    .put("query", new JSONObject().put("type", "STRING").put("description", "The search query"))
+                )
+                .put("required", new JSONArray().put("query"))
+            ));
+            
+        // Tool: Maps Navigation
+        funcs.put(new JSONObject()
+            .put("name", "maps_navigation")
+            .put("description", "Get walking directions to a destination using Google Maps.")
+            .put("parameters", new JSONObject()
+                .put("type", "OBJECT")
+                .put("properties", new JSONObject()
+                    .put("destination", new JSONObject().put("type", "STRING").put("description", "Destination address or place name"))
+                )
+                .put("required", new JSONArray().put("destination"))
+            ));
+            
+        // Tool: Get Location
+        funcs.put(new JSONObject()
+            .put("name", "get_location")
+            .put("description", "Get the user's current GPS location coordinates.")
+            .put("parameters", new JSONObject().put("type", "OBJECT").put("properties", new JSONObject()))
+        );
+            
+        // Tool: Weather (uses google_search internally)
+        funcs.put(new JSONObject()
+            .put("name", "weather")
+            .put("description", "Get weather information for a specific location. This uses Google Search to find current weather data.")
+            .put("parameters", new JSONObject()
+                .put("type", "OBJECT")
+                .put("properties", new JSONObject()
+                    .put("location", new JSONObject().put("type", "STRING").put("description", "City name or location (e.g., 'Atlanta, GA' or 'New York')"))
+                )
+                .put("required", new JSONArray().put("location"))
+            ));
+            
+        // Tool: Open App
+        funcs.put(new JSONObject()
+            .put("name", "gui_open_app")
+            .put("description", "Open an app on the phone by name. Use this when the user asks to open an app that's not currently visible on screen.")
+            .put("parameters", new JSONObject()
+                .put("type", "OBJECT")
+                .put("properties", new JSONObject()
+                    .put("app_name", new JSONObject().put("type", "STRING").put("description", "Name of the app to open (e.g., 'Messenger', 'Settings', 'Chrome')"))
+                )
+                .put("required", new JSONArray().put("app_name"))
             ));
 
         functionDeclarations.put("function_declarations", funcs);
