@@ -6,11 +6,14 @@ import android.content.pm.PackageManager;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -61,6 +64,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Set status bar color to match app (yellow when idle)
+        setStatusBarColor(R.color.effective_yellow);
+        
         setContentView(R.layout.activity_main);
 
         // Initialize views
@@ -87,6 +94,14 @@ public class MainActivity extends AppCompatActivity {
         updateStatus("Ready");
     }
 
+    private void setStatusBarColor(int colorResId) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            Window window = getWindow();
+            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            window.setStatusBarColor(ContextCompat.getColor(this, colorResId));
+        }
+    }
+
     private void initializeTapMate() {
         try {
             Log.i(TAG, "Initializing TapMate...");
@@ -100,11 +115,9 @@ public class MainActivity extends AppCompatActivity {
             orchestrator.registerSubAgent(new GUIAgent(this));
 
             Log.i(TAG, "TapMate initialized successfully");
-            Toast.makeText(this, "TapMate ready!", Toast.LENGTH_SHORT).show();
 
         } catch (Exception e) {
             Log.e(TAG, "Error initializing TapMate", e);
-            Toast.makeText(this, "Error initializing: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -115,6 +128,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+                if (e1 == null || e2 == null) return false;
+                
                 float diffX = e2.getX() - e1.getX();
                 float diffY = e2.getY() - e1.getY();
 
@@ -131,17 +146,28 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             }
         });
-
-        // Apply gesture detector to main container
-        findViewById(R.id.main_container).setOnTouchListener((v, event) -> {
-            gestureDetector.onTouchEvent(event);
-            return false;
-        });
     }
 
     private void setupListeners() {
-        // Idle layout - tap anywhere to start
-        idleLayout.setOnClickListener(v -> startSession());
+        // Idle layout - handle both tap and swipe
+        idleLayout.setOnTouchListener((v, event) -> {
+            // First, try to detect swipe
+            boolean swipeDetected = gestureDetector.onTouchEvent(event);
+            
+            // If no swipe and it's a single tap (ACTION_UP), start session
+            if (!swipeDetected && event.getAction() == MotionEvent.ACTION_UP) {
+                startSession();
+                return true;
+            }
+            
+            return swipeDetected;
+        });
+
+        // Active layout - allow swipe
+        activeLayout.setOnTouchListener((v, event) -> {
+            gestureDetector.onTouchEvent(event);
+            return false; // Let child views handle clicks
+        });
 
         // Mute button
         btnMute.setOnClickListener(v -> toggleMute());
@@ -156,7 +182,7 @@ public class MainActivity extends AppCompatActivity {
 
             // Check microphone permission
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "Microphone permission required", Toast.LENGTH_LONG).show();
+                Log.w(TAG, "Microphone permission required");
                 requestPermissions();
                 return;
             }
@@ -171,12 +197,14 @@ public class MainActivity extends AppCompatActivity {
             idleLayout.setVisibility(View.GONE);
             activeLayout.setVisibility(View.VISIBLE);
 
+            // Change status bar to yellow (mute section color)
+            setStatusBarColor(R.color.effective_yellow);
+
             updateStatus("Listening...");
-            Toast.makeText(this, "Session started - I'm listening", Toast.LENGTH_SHORT).show();
+            Log.i(TAG, "Session started successfully");
 
         } catch (Exception e) {
             Log.e(TAG, "Error starting session", e);
-            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -194,12 +222,17 @@ public class MainActivity extends AppCompatActivity {
             activeLayout.setVisibility(View.GONE);
             idleLayout.setVisibility(View.VISIBLE);
 
+            // Reset mute state
+            isMuted = false;
+
+            // Change status bar back to yellow
+            setStatusBarColor(R.color.effective_yellow);
+
             updateStatus("Ready");
-            Toast.makeText(this, "Session stopped", Toast.LENGTH_SHORT).show();
+            Log.i(TAG, "Session stopped successfully");
 
         } catch (Exception e) {
             Log.e(TAG, "Error stopping session", e);
-            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -207,17 +240,17 @@ public class MainActivity extends AppCompatActivity {
         isMuted = !isMuted;
 
         if (isMuted) {
-            // Muted - show rectangle (unmute icon)
-            muteIcon.setImageResource(R.drawable.rectangle_stop);
+            // Muted - show triangle (unmute icon)
+            muteIcon.setImageResource(R.drawable.triangle_start);
             muteText.setText("Unmute");
             updateStatus("Muted");
-            Toast.makeText(this, "Microphone muted", Toast.LENGTH_SHORT).show();
+            Log.i(TAG, "Microphone muted");
         } else {
             // Unmuted - show pause lines (mute icon)
             muteIcon.setImageResource(R.drawable.pause_lines);
             muteText.setText("Mute");
             updateStatus("Listening...");
-            Toast.makeText(this, "Microphone active", Toast.LENGTH_SHORT).show();
+            Log.i(TAG, "Microphone unmuted");
         }
     }
 
@@ -253,22 +286,26 @@ public class MainActivity extends AppCompatActivity {
             // Start recording thread
             recordingThread = new Thread(() -> {
                 byte[] buffer = new byte[bufferSize];
+                int consecutiveReads = 0;
+                
                 while (isRecording && !Thread.currentThread().isInterrupted()) {
                     int bytesRead = audioRecord.read(buffer, 0, buffer.length);
                     if (bytesRead > 0 && !isMuted) {
+                        // Log every 50th read to avoid spam
+                        if (consecutiveReads % 50 == 0) {
+                            Log.d(TAG, "✓ Audio receiving: " + bytesRead + " bytes (microphone is working!)");
+                        }
+                        consecutiveReads++;
                         // TODO: Process audio data (send to Gemini)
-                        // For now, just log that we're receiving audio
-                        Log.d(TAG, "Audio data received: " + bytesRead + " bytes");
                     }
                 }
             });
             recordingThread.start();
 
-            Log.i(TAG, "Audio recording started");
+            Log.i(TAG, "✓ Audio recording started successfully - check logcat for audio data");
 
         } catch (Exception e) {
             Log.e(TAG, "Error starting audio recording", e);
-            Toast.makeText(this, "Microphone error: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -292,7 +329,7 @@ public class MainActivity extends AppCompatActivity {
     private void openSettings() {
         // TODO: Create SettingsActivity
         Toast.makeText(this, "Settings - Coming soon!", Toast.LENGTH_SHORT).show();
-        Log.i(TAG, "Opening settings (not yet implemented)");
+        Log.i(TAG, "Swipe detected - Opening settings (not yet implemented)");
     }
 
     private void updateStatus(String status) {
@@ -334,9 +371,9 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (allGranted) {
-                Toast.makeText(this, "Permissions granted!", Toast.LENGTH_SHORT).show();
+                Log.i(TAG, "All permissions granted");
             } else {
-                Toast.makeText(this, "Some permissions denied - app may not work fully", Toast.LENGTH_LONG).show();
+                Log.w(TAG, "Some permissions denied");
             }
         }
     }
