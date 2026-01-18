@@ -106,14 +106,62 @@ public class SessionActivity extends Activity {
         BaseAgent.AgentCallback agentCallback = new BaseAgent.AgentCallback() {
             @Override
             public void onResult(String functionName, String result, String callId) {
-                updateStatus(result);
-                sendFunctionResultToGemini(functionName, result, callId);
+                try {
+                    // #region agent log
+                    try {
+                        java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                        fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.agentCallback.onResult:ENTRY " + 
+                            "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H4\",\"location\":\"SessionActivity.java:agentCallback.onResult\",\"message\":\"Agent callback result\",\"data\":{\"functionName\":\"" + 
+                            functionName + "\",\"callId\":\"" + (callId != null ? callId : "null") + "\"},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                        fw.close();
+                    } catch (Exception e) {}
+                    // #endregion
+                    if (!isFinishing() && !isDestroyed()) {
+                        updateStatus(result);
+                        sendFunctionResultToGemini(functionName, result, callId);
+                    }
+                } catch (Throwable t) {
+                    android.util.Log.e(TAG, "Error in agent callback onResult", t);
+                    // #region agent log
+                    try {
+                        java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                        fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.agentCallback.onResult:ERROR " + 
+                            "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H4\",\"location\":\"SessionActivity.java:agentCallback.onResult\",\"message\":\"Error in callback\",\"data\":{\"functionName\":\"" + 
+                            functionName + "\",\"error\":\"" + t.getMessage() + "\"},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                        fw.close();
+                    } catch (Exception e) {}
+                    // #endregion
+                }
             }
             
             @Override
             public void onError(String functionName, String error, String callId) {
-                updateStatus("Error: " + error);
-                sendFunctionResultToGemini(functionName, error, callId);
+                try {
+                    // #region agent log
+                    try {
+                        java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                        fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.agentCallback.onError:ENTRY " + 
+                            "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H4\",\"location\":\"SessionActivity.java:agentCallback.onError\",\"message\":\"Agent callback error\",\"data\":{\"functionName\":\"" + 
+                            functionName + "\",\"callId\":\"" + (callId != null ? callId : "null") + "\",\"error\":\"" + error + "\"},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                        fw.close();
+                    } catch (Exception e) {}
+                    // #endregion
+                    if (!isFinishing() && !isDestroyed()) {
+                        updateStatus("Error: " + error);
+                        sendFunctionResultToGemini(functionName, error, callId);
+                    }
+                } catch (Throwable t) {
+                    android.util.Log.e(TAG, "Error in agent callback onError", t);
+                    // #region agent log
+                    try {
+                        java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                        fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.agentCallback.onError:ERROR " + 
+                            "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H4\",\"location\":\"SessionActivity.java:agentCallback.onError\",\"message\":\"Error in callback\",\"data\":{\"functionName\":\"" + 
+                            functionName + "\",\"error\":\"" + t.getMessage() + "\"},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                        fw.close();
+                    } catch (Exception e) {}
+                    // #endregion
+                }
             }
         };
         
@@ -201,6 +249,15 @@ public class SessionActivity extends Activity {
             }
 
             @Override
+            public void onError(Exception e) {
+                mainHandler.post(() -> {
+                    android.util.Log.e(TAG, "Gemini Live error", e);
+                    updateStatus("Error: " + e.getMessage());
+                    stopAudioCapture();
+                });
+            }
+            
+            @Override
             public void onAudioChunk(byte[] audioData) {
                 // Play audio response from Gemini
                 Log.d(TAG, "onAudioChunk called with " + (audioData != null ? audioData.length : 0) + " bytes");
@@ -250,47 +307,10 @@ public class SessionActivity extends Activity {
                 lastFunctionCallId = callId;
                 
                 mainHandler.post(() -> {
-                    try {
-                        // #region agent log
-                        try {
-                            android.util.Log.d("SessionActivity", "FUNCTION_CALL_POSTING: " + functionName + " id:" + callId);
-                        } catch (Exception e) {}
-                        // #endregion
-                        
-                        // Double-check activity is still valid
-                        if (isFinishing() || isDestroyed()) {
-                            Log.w(TAG, "Activity finishing in handler, ignoring function call");
-                            return;
-                        }
-                        
-                        handleGeminiFunctionCall(functionName, args != null ? args : new JSONObject(), callId);
-                    } catch (Throwable t) {
-                        // Catch ALL exceptions including runtime exceptions
-                        Log.e(TAG, "Fatal error in function call handler", t);
-                        // #region agent log
-                        try {
-                            android.util.Log.e("SessionActivity", "FUNCTION_CALL_ERROR: " + functionName + " error: " + t.getMessage());
-                        } catch (Exception e) {}
-                        // #endregion
-                        try {
-                            updateStatus("Error: " + t.getMessage());
-                            // Send error response back to Gemini
-                            sendFunctionResultToGemini(functionName, "Error: " + t.getMessage(), callId);
-                        } catch (Exception e) {
-                            Log.e(TAG, "Could not update status", e);
-                        }
-                    }
+                    handleGeminiFunctionCall(functionName, args, callId);
                 });
             }
-
-            @Override
-            public void onError(Exception e) {
-                mainHandler.post(() -> {
-                    Log.e(TAG, "Gemini Live error", e);
-                    updateStatus("Error: " + e.getMessage());
-                });
-            }
-        }, accessibilityService != null ? accessibilityService.getScreenState() : "[]");
+        }, screenState);
     }
 
     private void startAudioCapture() {
@@ -519,8 +539,14 @@ public class SessionActivity extends Activity {
     private void handleGeminiFunctionCall(String functionName, JSONObject args, String callId) {
         // #region agent log
         try {
-            android.util.Log.d("SessionActivity", "HANDLE_FUNCTION_CALL: " + functionName + " id:" + callId);
-        } catch (Exception e) {}
+            java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+            fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.handleGeminiFunctionCall:ENTRY " + 
+                "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H2\",\"location\":\"SessionActivity.java:handleGeminiFunctionCall\",\"message\":\"Handling function call\",\"data\":{\"functionName\":\"" + 
+                functionName + "\",\"callId\":\"" + (callId != null ? callId : "null") + "\",\"agentRegistryNull\":" + (agentRegistry == null) + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+            fw.close();
+        } catch (Exception e) {
+            android.util.Log.e(TAG, "Error logging function call entry", e);
+        }
         // #endregion
         
         if (functionName == null || functionName.isEmpty()) {
@@ -537,7 +563,25 @@ public class SessionActivity extends Activity {
         
         // Use AgentRegistry to route function calls
         if (agentRegistry != null) {
+            // #region agent log
+            try {
+                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.handleGeminiFunctionCall:ROUTING " + 
+                    "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H3\",\"location\":\"SessionActivity.java:handleGeminiFunctionCall\",\"message\":\"Routing to AgentRegistry\",\"data\":{\"functionName\":\"" + 
+                    functionName + "\",\"agentCount\":" + agentRegistry.getAgentCount() + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                fw.close();
+            } catch (Exception e) {}
+            // #endregion
             boolean handled = agentRegistry.handleFunctionCall(functionName, args, callId);
+            // #region agent log
+            try {
+                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " SessionActivity.handleGeminiFunctionCall:ROUTED " + 
+                    "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H3\",\"location\":\"SessionActivity.java:handleGeminiFunctionCall\",\"message\":\"Routing result\",\"data\":{\"functionName\":\"" + 
+                    functionName + "\",\"handled\":" + handled + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                fw.close();
+            } catch (Exception e) {}
+            // #endregion
             if (!handled) {
                 updateStatus("Unknown function: " + functionName);
                 sendFunctionResultToGemini(functionName, "Unknown function: " + functionName, callId);

@@ -18,7 +18,8 @@ public class GeminiClient {
     // Loaded from Config (sourced from .env)
     private static final String API_KEY = com.nexhacks.tapmate.utils.Config.GEMINI_API_KEY; 
     // Using Gemini 2.0 Flash Experimental
-    private static final String BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=" + API_KEY;
+    // Use trained model endpoint
+    private static final String BASE_URL = "https://us-central1-generativelanguage.googleapis.com/v1beta/projects/225746718246/locations/us-central1/models/5066328578954625024/versions/1:generateContent?key=" + API_KEY;
 
     private final OkHttpClient client;
 

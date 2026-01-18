@@ -96,7 +96,13 @@ public class MemoryAgent extends BaseAgent {
                 );
                 database.memoryDao().insert(item);
                 String result = "Saved to memory: " + key;
-                mainHandler.post(() -> callback.onResult("memory_save", result, callId));
+                mainHandler.post(() -> {
+                    try {
+                        callback.onResult("memory_save", result, callId);
+                    } catch (Throwable t) {
+                        android.util.Log.e(TAG, "Error in callback", t);
+                    }
+                });
             } catch (Exception e) {
                 Log.e(TAG, "Error saving memory", e);
                 mainHandler.post(() -> callback.onError("memory_save", "Error saving memory: " + e.getMessage(), callId));
@@ -114,12 +120,16 @@ public class MemoryAgent extends BaseAgent {
                 }
                 final MemoryItem finalItem = item;
                 mainHandler.post(() -> {
-                    if (finalItem != null) {
-                        String result = "I recall: " + finalItem.rawText;
-                        callback.onResult("memory_recall", result, callId);
-                    } else {
-                        String result = "No memory found for type: " + recallType;
-                        callback.onResult("memory_recall", result, callId);
+                    try {
+                        if (finalItem != null) {
+                            String result = "I recall: " + finalItem.rawText;
+                            callback.onResult("memory_recall", result, callId);
+                        } else {
+                            String result = "No memory found for type: " + recallType;
+                            callback.onResult("memory_recall", result, callId);
+                        }
+                    } catch (Throwable t) {
+                        android.util.Log.e(TAG, "Error in callback", t);
                     }
                 });
             } catch (Exception e) {

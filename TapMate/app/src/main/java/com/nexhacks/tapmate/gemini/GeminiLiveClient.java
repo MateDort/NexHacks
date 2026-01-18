@@ -108,13 +108,48 @@ public class GeminiLiveClient extends WebSocketListener {
         } catch (Exception e) {}
         // #endregion
         
+        // #region agent log
+        try {
+            java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+            fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " GeminiLiveClient.startSession:WS_CREATED " + 
+                "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"C\",\"location\":\"GeminiLiveClient.java:startSession\",\"message\":\"WebSocket object created\",\"data\":{\"webSocketNull\":" + 
+                (webSocket == null) + ",\"isConnected\":" + isConnected + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+            fw.close();
+        } catch (Exception e) {}
+        // #endregion
+        
         webSocket = client.newWebSocket(request, this);
+        
+        // #region agent log
+        try {
+            java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+            fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " GeminiLiveClient.startSession:WS_INITIATED " + 
+                "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"C\",\"location\":\"GeminiLiveClient.java:startSession\",\"message\":\"WebSocket connection initiated\",\"data\":{\"webSocketNull\":" + 
+                (webSocket == null) + ",\"isConnected\":" + isConnected + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+            fw.close();
+        } catch (Exception e) {}
+        // #endregion
+    }
+    
+    public boolean isConnected() {
+        return isConnected;
     }
     
     private String currentScreenState = "[]";
     private boolean setupSent = false;
     
     public void sendFunctionResponse(String functionName, JSONObject response, String callId) {
+        // #region agent log
+        try {
+            java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+            fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " GeminiLiveClient.sendFunctionResponse:ENTRY " + 
+                "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H5\",\"location\":\"GeminiLiveClient.java:sendFunctionResponse\",\"message\":\"Sending function response\",\"data\":{\"functionName\":\"" + 
+                functionName + "\",\"callId\":\"" + (callId != null ? callId : "null") + "\",\"isConnected\":" + isConnected + ",\"webSocketNull\":" + (webSocket == null) + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+            fw.close();
+        } catch (Exception e) {
+            android.util.Log.e(TAG, "Error logging", e);
+        }
+        // #endregion
         if (webSocket == null || !isConnected) {
             Log.w(TAG, "WebSocket not connected, cannot send function response");
             return;
@@ -137,7 +172,11 @@ public class GeminiLiveClient extends WebSocketListener {
             Log.d(TAG, "Sent function response for: " + functionName + (callId != null ? " (id: " + callId + ")" : ""));
             // #region agent log
             try {
-                android.util.Log.d("GeminiLiveClient", "FUNCTION_RESPONSE_SENT: " + functionName + " id:" + callId + " -> " + response.toString());
+                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " GeminiLiveClient.sendFunctionResponse:SENT " + 
+                    "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H5\",\"location\":\"GeminiLiveClient.java:sendFunctionResponse\",\"message\":\"Function response sent via WebSocket\",\"data\":{\"functionName\":\"" + 
+                    functionName + "\",\"callId\":\"" + (callId != null ? callId : "null") + "\",\"messageSize\":" + messageJson.length() + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                fw.close();
             } catch (Exception e) {}
             // #endregion
         } catch (Exception e) {
@@ -173,8 +212,8 @@ public class GeminiLiveClient extends WebSocketListener {
                 // #endregion
                 JSONObject setup = new JSONObject();
                 JSONObject setupContent = new JSONObject();
-                // Use Live-enabled model name
-                setupContent.put("model", "models/gemini-2.0-flash-exp"); // Try with live model if available: "models/gemini-live-2.5-flash"
+                // Use Live-enabled model name (Live API doesn't support trained models, use base model)
+                setupContent.put("model", "models/gemini-2.0-flash-exp");
                 
                 JSONObject genConfig = new JSONObject();
                 // Use response_modalities (plural) as array
@@ -193,6 +232,15 @@ public class GeminiLiveClient extends WebSocketListener {
                 setupContent.put("tools", tools);
                 setupContent.put("system_instruction", systemInstruction);
                 setup.put("setup", setupContent);
+                // #region agent log
+                try {
+                    java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                    fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " GeminiLiveClient.sendAudioChunk:SETUP_WITH_TOOLS " + 
+                        "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H6\",\"location\":\"GeminiLiveClient.java:sendAudioChunk\",\"message\":\"Setup message with tools\",\"data\":{\"toolsLength\":" + 
+                        tools.length() + ",\"hasSystemInstruction\":" + (systemInstruction != null) + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                    fw.close();
+                } catch (Exception e) {}
+                // #endregion
                 
                 String setupJson = setup.toString();
                 webSocket.send(setupJson);
@@ -267,13 +315,40 @@ public class GeminiLiveClient extends WebSocketListener {
             if (agentRegistry != null) {
                 funcs = agentRegistry.getAllFunctionDeclarations();
                 Log.d(TAG, "Using AgentRegistry: " + funcs.length() + " functions");
+                // #region agent log
+                try {
+                    java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                    fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " GeminiLiveClient.createTools:AGENT_REGISTRY " + 
+                        "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H6\",\"location\":\"GeminiLiveClient.java:createTools\",\"message\":\"Using AgentRegistry for tools\",\"data\":{\"functionCount\":" + 
+                        funcs.length() + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                    fw.close();
+                } catch (Exception e) {}
+                // #endregion
             } else {
                 funcs = createToolsManually();
                 Log.d(TAG, "Using manual tool definitions: " + funcs.length() + " functions");
+                // #region agent log
+                try {
+                    java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                    fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " GeminiLiveClient.createTools:MANUAL " + 
+                        "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H6\",\"location\":\"GeminiLiveClient.java:createTools\",\"message\":\"Using manual tool definitions\",\"data\":{\"functionCount\":" + 
+                        funcs.length() + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                    fw.close();
+                } catch (Exception e) {}
+                // #endregion
             }
             
             functionDeclarations.put("function_declarations", funcs);
             tools.put(functionDeclarations);
+            // #region agent log
+            try {
+                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " GeminiLiveClient.createTools:COMPLETE " + 
+                    "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"H6\",\"location\":\"GeminiLiveClient.java:createTools\",\"message\":\"Tools created\",\"data\":{\"functionCount\":" + 
+                    funcs.length() + ",\"toolsJson\":\"" + tools.toString().substring(0, Math.min(500, tools.toString().length())).replace("\"", "\\\"") + "...\"},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                fw.close();
+            } catch (Exception e) {}
+            // #endregion
             return tools;
         } catch (org.json.JSONException e) {
             Log.e(TAG, "Error creating tools", e);
@@ -451,19 +526,16 @@ public class GeminiLiveClient extends WebSocketListener {
             textPart.put("text", "You are TapMate, an Android Accessibility Agent that helps users control their phone through voice commands.\n\n" +
                 "Current Screen State (JSON): " + screenStateJson + "\n\n" +
                 "Instructions:\n" +
-                "- Analyze the screen state to understand what's currently visible\n" +
-                "- If the user wants to interact with the screen (click, type, scroll), use the appropriate GUI function\n" +
-                "- When clicking, use the 'id' field from screen state nodes. If no ID, try using text or description\n" +
-                "- If the user asks to open an app that's NOT on the current screen, use gui_open_app to launch it\n" +
+                "- For GUI tasks (clicking, typing, scrolling, opening apps), ALWAYS use gui_execute_plan with the user's goal and current screen state\n" +
+                "- The gui_execute_plan function will create a todo list and execute steps automatically, analyzing after each step\n" +
+                "- DO NOT use individual gui_click, gui_type, or gui_scroll functions - use gui_execute_plan instead\n" +
+                "- If the user asks to open an app that's NOT on the current screen, use gui_open_app to launch it first, then use gui_execute_plan for any actions within that app\n" +
                 "- Always provide helpful feedback in your responses\n" +
                 "- If you need to save important information (like car details, ETAs), use memory_save\n" +
                 "- Use memory_recall to retrieve saved information when needed\n" +
-                "- Use google_search to find information on the web\n" +
+                "- Use google_search to find information on the web (including weather queries)\n" +
                 "- Use maps_navigation to get directions to a location\n" +
-                "- Use get_location to find out where the user is\n" +
-                "- Use weather to get weather information for any location (it uses Google Search internally)\n" +
-                "- Alternatively, you can use google_search directly for weather queries\n" +
-                "- If the user asks to open an app that's NOT on the current screen, use gui_open_app to launch it");
+                "- Use get_location to find out where the user is");
             parts.put(textPart);
             instruction.put("parts", parts);
             return instruction;
@@ -490,15 +562,49 @@ public class GeminiLiveClient extends WebSocketListener {
         try {
             java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
             int responseCode = response != null ? response.code() : -1;
+            String responseMessage = response != null ? response.message() : "null";
+            String responseHeaders = response != null && response.headers() != null ? response.headers().toString() : "null";
             fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " GeminiLiveClient.onOpen:WS_CONNECTED " + 
-                "{\"sessionId\":\"debug-session\",\"runId\":\"run6\",\"hypothesisId\":\"E\",\"location\":\"GeminiLiveClient.java:onOpen\",\"message\":\"WebSocket connected\",\"data\":{\"responseCode\":" + 
-                responseCode + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"E\",\"location\":\"GeminiLiveClient.java:onOpen\",\"message\":\"WebSocket connected successfully\",\"data\":{\"responseCode\":" + 
+                responseCode + ",\"responseMessage\":\"" + responseMessage.replace("\"", "\\\"") + "\",\"wasConnectedBefore\":" + isConnected + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+            fw.close();
+        } catch (Exception e) {
+            android.util.Log.e(TAG, "Error logging onOpen", e);
+        }
+        // #endregion
+        isConnected = true;
+        // #region agent log
+        try {
+            java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+            fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " GeminiLiveClient.onOpen:IS_CONNECTED_SET " + 
+                "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"E\",\"location\":\"GeminiLiveClient.java:onOpen\",\"message\":\"isConnected flag set to true\",\"data\":{\"isConnected\":" + 
+                isConnected + ",\"callbackNull\":" + (callback == null) + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
             fw.close();
         } catch (Exception e) {}
         // #endregion
-        isConnected = true;
         if (callback != null) {
-            callback.onConnected();
+            try {
+                callback.onConnected();
+                // #region agent log
+                try {
+                    java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                    fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " GeminiLiveClient.onOpen:CALLBACK_CALLED " + 
+                        "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"E\",\"location\":\"GeminiLiveClient.java:onOpen\",\"message\":\"onConnected callback invoked\",\"data\":{},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                    fw.close();
+                } catch (Exception e) {}
+                // #endregion
+            } catch (Throwable t) {
+                android.util.Log.e(TAG, "Error in onConnected callback", t);
+            }
+        } else {
+            // #region agent log
+            try {
+                java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+                fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " GeminiLiveClient.onOpen:CALLBACK_NULL " + 
+                    "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"E\",\"location\":\"GeminiLiveClient.java:onOpen\",\"message\":\"Callback is null, cannot notify\",\"data\":{},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                fw.close();
+            } catch (Exception e) {}
+            // #endregion
         }
     }
     
@@ -672,13 +778,47 @@ public class GeminiLiveClient extends WebSocketListener {
             String errorClass = t != null ? t.getClass().getName() : "null";
             int responseCode = response != null ? response.code() : -1;
             String responseMsg = response != null ? response.message() : "null";
+            String responseBody = "null";
+            if (response != null && response.body() != null) {
+                try {
+                    responseBody = response.body().string();
+                    if (responseBody.length() > 500) {
+                        responseBody = responseBody.substring(0, 500) + "...";
+                    }
+                } catch (Exception e) {
+                    responseBody = "error reading body: " + e.getMessage();
+                }
+            }
+            String stackTrace = "";
+            if (t != null) {
+                java.io.StringWriter sw = new java.io.StringWriter();
+                java.io.PrintWriter pw = new java.io.PrintWriter(sw);
+                t.printStackTrace(pw);
+                stackTrace = sw.toString();
+                if (stackTrace.length() > 1000) {
+                    stackTrace = stackTrace.substring(0, 1000) + "...";
+                }
+            }
             fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " GeminiLiveClient.onFailure:WS_ERROR " + 
-                "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\",\"location\":\"GeminiLiveClient.java:onFailure\",\"message\":\"WebSocket failure\",\"data\":{\"errorClass\":\"" + 
-                errorClass + "\",\"errorMessage\":\"" + errorMsg + "\",\"responseCode\":" + responseCode + ",\"responseMessage\":\"" + responseMsg + "\"},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+                "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\",\"location\":\"GeminiLiveClient.java:onFailure\",\"message\":\"WebSocket connection failed\",\"data\":{\"errorClass\":\"" + 
+                errorClass.replace("\"", "\\\"") + "\",\"errorMessage\":\"" + errorMsg.replace("\"", "\\\"") + "\",\"responseCode\":" + responseCode + ",\"responseMessage\":\"" + 
+                responseMsg.replace("\"", "\\\"") + "\",\"responseBody\":\"" + responseBody.replace("\"", "\\\"").replace("\n", "\\n") + "\",\"stackTrace\":\"" + 
+                stackTrace.replace("\"", "\\\"").replace("\n", "\\n") + "\",\"wasConnectedBefore\":" + isConnected + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
+            fw.close();
+        } catch (Exception e) {
+            android.util.Log.e(TAG, "Error logging onFailure", e);
+        }
+        // #endregion
+        isConnected = false;
+        // #region agent log
+        try {
+            java.io.FileWriter fw = new java.io.FileWriter("/Users/matedort/NexHacks/.cursor/debug.log", true);
+            fw.write(java.util.UUID.randomUUID().toString() + " " + System.currentTimeMillis() + " GeminiLiveClient.onFailure:IS_CONNECTED_FALSE " + 
+                "{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\",\"location\":\"GeminiLiveClient.java:onFailure\",\"message\":\"isConnected set to false after failure\",\"data\":{\"isConnected\":" + 
+                isConnected + "},\"timestamp\":" + System.currentTimeMillis() + "}\n");
             fw.close();
         } catch (Exception e) {}
         // #endregion
-        isConnected = false;
         if (callback != null) {
             callback.onError(new Exception("WebSocket error", t));
         }
@@ -1031,9 +1171,5 @@ public class GeminiLiveClient extends WebSocketListener {
             } catch (Exception ex) {}
             // #endregion
         }
-    }
-    
-    public boolean isConnected() {
-        return isConnected;
     }
 }

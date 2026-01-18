@@ -78,12 +78,16 @@ public class NavigationAgent extends BaseAgent {
                 
                 JSONObject directions = mapsIntegration.getWalkingDirections(destination, origin);
                 mainHandler.post(() -> {
-                    if (directions != null) {
-                        String result = "I've started navigation to " + destination;
-                        callback.onResult("maps_navigation", result, callId);
-                    } else {
-                        String result = "I couldn't get directions to " + destination + ". Please check your internet connection and try again.";
-                        callback.onResult("maps_navigation", result, callId);
+                    try {
+                        if (directions != null) {
+                            String result = "I've started navigation to " + destination;
+                            callback.onResult("maps_navigation", result, callId);
+                        } else {
+                            String result = "I couldn't get directions to " + destination + ". Please check your internet connection and try again.";
+                            callback.onResult("maps_navigation", result, callId);
+                        }
+                    } catch (Throwable t) {
+                        android.util.Log.e(TAG, "Error in callback", t);
                     }
                 });
             } catch (Exception e) {
@@ -98,12 +102,16 @@ public class NavigationAgent extends BaseAgent {
             try {
                 Location loc = locationService.getCurrentLocation();
                 mainHandler.post(() -> {
-                    if (loc != null) {
-                        String locationStr = "Your location is approximately " + loc.getLatitude() + ", " + loc.getLongitude();
-                        callback.onResult("get_location", locationStr, callId);
-                    } else {
-                        String result = "I couldn't determine your location. Please enable location services and grant location permission.";
-                        callback.onResult("get_location", result, callId);
+                    try {
+                        if (loc != null) {
+                            String locationStr = "Your location is approximately " + loc.getLatitude() + ", " + loc.getLongitude();
+                            callback.onResult("get_location", locationStr, callId);
+                        } else {
+                            String result = "I couldn't determine your location. Please enable location services and grant location permission.";
+                            callback.onResult("get_location", result, callId);
+                        }
+                    } catch (Throwable t) {
+                        android.util.Log.e(TAG, "Error in callback", t);
                     }
                 });
             } catch (Exception e) {
