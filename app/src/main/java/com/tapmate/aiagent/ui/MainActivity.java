@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.tapmate.aiagent.R;
 import com.tapmate.aiagent.agents.ConfigAgent;
 import com.tapmate.aiagent.agents.DatabaseAgent;
+import com.tapmate.aiagent.agents.GUIAgent;
 import com.tapmate.aiagent.core.TapMateOrchestrator;
 
 /**
@@ -59,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
             // Register sub-agents
             orchestrator.registerSubAgent(new ConfigAgent(this));
             orchestrator.registerSubAgent(new DatabaseAgent(this));
+            orchestrator.registerSubAgent(new GUIAgent(this));
 
             Log.i(TAG, "TapMate initialized successfully");
             Toast.makeText(this, "TapMate ready!", Toast.LENGTH_SHORT).show();

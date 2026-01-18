@@ -50,4 +50,7 @@
     <string name="desc_stop_button">Stop session button</string>
     <string name="desc_mute_button">Mute microphone button</string>
     <string name="desc_settings_button">Settings button</string>
+
+    <!-- Accessibility Service -->
+    <string name="accessibility_service_description">TapMate Accessibility Service enables AI-powered phone control for visually impaired users. TapMate can read screen content, tap buttons, type text, scroll, and navigate apps on your behalf using a trained AI model with 95% success rate. This service is essential for TapMate\'s core functionality.</string>
 </resources>
