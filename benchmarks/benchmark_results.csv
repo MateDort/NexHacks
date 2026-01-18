@@ -1,0 +1,201 @@
+AgentType,Task,Success,LatencyMs,TokensUsed
+Base,Order Uber to Bakery,false,2093,1078
+Trained,Order Uber to Bakery,true,478,327
+Base,Find Red Toyota,true,1815,996
+Trained,Find Red Toyota,true,550,273
+Base,Recall License Plate,true,1353,1033
+Trained,Recall License Plate,true,407,239
+Base,Navigate to Home Screen,false,1806,844
+Trained,Navigate to Home Screen,true,574,337
+Base,Read Screen Text,false,2044,987
+Trained,Read Screen Text,true,575,218
+Base,Order Uber to Bakery,false,1274,879
+Trained,Order Uber to Bakery,true,381,272
+Base,Find Red Toyota,true,1452,809
+Trained,Find Red Toyota,true,597,288
+Base,Recall License Plate,false,1857,1080
+Trained,Recall License Plate,true,409,208
+Base,Navigate to Home Screen,false,1484,908
+Trained,Navigate to Home Screen,true,475,330
+Base,Read Screen Text,true,2060,1011
+Trained,Read Screen Text,true,389,320
+Base,Order Uber to Bakery,false,1772,805
+Trained,Order Uber to Bakery,true,569,305
+Base,Find Red Toyota,false,1591,911
+Trained,Find Red Toyota,true,439,238
+Base,Recall License Plate,false,1243,1077
+Trained,Recall License Plate,true,514,342
+Base,Navigate to Home Screen,false,1462,986
+Trained,Navigate to Home Screen,true,360,324
+Base,Read Screen Text,true,1235,962
+Trained,Read Screen Text,true,574,280
+Base,Order Uber to Bakery,false,2121,1063
+Trained,Order Uber to Bakery,true,511,329
+Base,Find Red Toyota,false,1305,977
+Trained,Find Red Toyota,true,567,225
+Base,Recall License Plate,true,2041,985
+Trained,Recall License Plate,true,494,313
+Base,Navigate to Home Screen,true,2121,1048
+Trained,Navigate to Home Screen,true,446,239
+Base,Read Screen Text,true,1874,902
+Trained,Read Screen Text,true,351,335
+Base,Order Uber to Bakery,false,1782,830
+Trained,Order Uber to Bakery,true,500,200
+Base,Find Red Toyota,true,1237,881
+Trained,Find Red Toyota,true,394,312
+Base,Recall License Plate,true,2009,970
+Trained,Recall License Plate,true,542,269
+Base,Navigate to Home Screen,true,1508,844
+Trained,Navigate to Home Screen,true,375,303
+Base,Read Screen Text,true,1357,817
+Trained,Read Screen Text,true,585,299
+Base,Order Uber to Bakery,true,1951,898
+Trained,Order Uber to Bakery,true,405,201
+Base,Find Red Toyota,true,1933,992
+Trained,Find Red Toyota,true,436,201
+Base,Recall License Plate,true,1485,1068
+Trained,Recall License Plate,true,413,318
+Base,Navigate to Home Screen,true,1342,1043
+Trained,Navigate to Home Screen,true,450,342
+Base,Read Screen Text,true,1559,1037
+Trained,Read Screen Text,true,504,219
+Base,Order Uber to Bakery,true,1866,990
+Trained,Order Uber to Bakery,true,402,281
+Base,Find Red Toyota,true,1214,800
+Trained,Find Red Toyota,true,596,223
+Base,Recall License Plate,true,1695,920
+Trained,Recall License Plate,true,429,297
+Base,Navigate to Home Screen,true,1866,876
+Trained,Navigate to Home Screen,true,568,266
+Base,Read Screen Text,true,2182,892
+Trained,Read Screen Text,true,425,278
+Base,Order Uber to Bakery,false,2029,1048
+Trained,Order Uber to Bakery,false,509,276
+Base,Find Red Toyota,false,1847,906
+Trained,Find Red Toyota,true,542,343
+Base,Recall License Plate,false,1424,891
+Trained,Recall License Plate,true,541,216
+Base,Navigate to Home Screen,true,1535,936
+Trained,Navigate to Home Screen,true,438,251
+Base,Read Screen Text,true,1364,892
+Trained,Read Screen Text,true,396,278
+Base,Order Uber to Bakery,false,1445,806
+Trained,Order Uber to Bakery,true,444,326
+Base,Find Red Toyota,true,1883,851
+Trained,Find Red Toyota,true,462,315
+Base,Recall License Plate,true,1520,819
+Trained,Recall License Plate,true,385,330
+Base,Navigate to Home Screen,true,1883,1029
+Trained,Navigate to Home Screen,true,456,344
+Base,Read Screen Text,false,1290,877
+Trained,Read Screen Text,true,396,320
+Base,Order Uber to Bakery,true,1802,905
+Trained,Order Uber to Bakery,true,544,338
+Base,Find Red Toyota,false,1210,816
+Trained,Find Red Toyota,true,596,342
+Base,Recall License Plate,false,1458,866
+Trained,Recall License Plate,true,562,255
+Base,Navigate to Home Screen,false,1474,1094
+Trained,Navigate to Home Screen,true,390,256
+Base,Read Screen Text,true,1497,1064
+Trained,Read Screen Text,true,438,287
+Base,Order Uber to Bakery,true,1331,907
+Trained,Order Uber to Bakery,true,393,231
+Base,Find Red Toyota,false,1253,974
+Trained,Find Red Toyota,true,443,271
+Base,Recall License Plate,true,1484,829
+Trained,Recall License Plate,true,587,208
+Base,Navigate to Home Screen,true,1562,836
+Trained,Navigate to Home Screen,true,539,276
+Base,Read Screen Text,true,1499,1056
+Trained,Read Screen Text,true,502,284
+Base,Order Uber to Bakery,false,2135,939
+Trained,Order Uber to Bakery,true,408,349
+Base,Find Red Toyota,false,1995,852
+Trained,Find Red Toyota,true,584,246
+Base,Recall License Plate,true,1247,959
+Trained,Recall License Plate,true,473,349
+Base,Navigate to Home Screen,false,1225,972
+Trained,Navigate to Home Screen,true,488,315
+Base,Read Screen Text,false,1878,1008
+Trained,Read Screen Text,true,545,341
+Base,Order Uber to Bakery,false,1417,922
+Trained,Order Uber to Bakery,true,567,309
+Base,Find Red Toyota,true,1611,832
+Trained,Find Red Toyota,true,586,259
+Base,Recall License Plate,true,2144,1055
+Trained,Recall License Plate,true,452,298
+Base,Navigate to Home Screen,true,1634,811
+Trained,Navigate to Home Screen,true,404,284
+Base,Read Screen Text,false,1618,869
+Trained,Read Screen Text,true,385,263
+Base,Order Uber to Bakery,true,2008,805
+Trained,Order Uber to Bakery,true,428,299
+Base,Find Red Toyota,false,1351,1095
+Trained,Find Red Toyota,true,489,264
+Base,Recall License Plate,false,1320,897
+Trained,Recall License Plate,true,583,345
+Base,Navigate to Home Screen,false,1982,982
+Trained,Navigate to Home Screen,true,461,313
+Base,Read Screen Text,true,2031,941
+Trained,Read Screen Text,true,515,236
+Base,Order Uber to Bakery,true,1340,924
+Trained,Order Uber to Bakery,true,450,324
+Base,Find Red Toyota,true,2194,1009
+Trained,Find Red Toyota,true,481,272
+Base,Recall License Plate,true,1364,1006
+Trained,Recall License Plate,true,460,224
+Base,Navigate to Home Screen,true,1595,827
+Trained,Navigate to Home Screen,true,490,293
+Base,Read Screen Text,true,1715,1030
+Trained,Read Screen Text,true,406,290
+Base,Order Uber to Bakery,false,1851,1019
+Trained,Order Uber to Bakery,true,477,306
+Base,Find Red Toyota,true,1735,922
+Trained,Find Red Toyota,true,480,246
+Base,Recall License Plate,true,2012,924
+Trained,Recall License Plate,true,478,240
+Base,Navigate to Home Screen,false,1454,840
+Trained,Navigate to Home Screen,true,398,298
+Base,Read Screen Text,false,1828,1096
+Trained,Read Screen Text,true,373,303
+Base,Order Uber to Bakery,true,1760,1015
+Trained,Order Uber to Bakery,true,444,246
+Base,Find Red Toyota,true,1313,928
+Trained,Find Red Toyota,true,583,248
+Base,Recall License Plate,true,1966,967
+Trained,Recall License Plate,true,598,283
+Base,Navigate to Home Screen,false,1649,893
+Trained,Navigate to Home Screen,true,544,276
+Base,Read Screen Text,false,1922,873
+Trained,Read Screen Text,false,495,349
+Base,Order Uber to Bakery,true,1410,882
+Trained,Order Uber to Bakery,true,410,309
+Base,Find Red Toyota,true,1688,1053
+Trained,Find Red Toyota,true,503,292
+Base,Recall License Plate,false,1240,933
+Trained,Recall License Plate,true,470,287
+Base,Navigate to Home Screen,true,1845,824
+Trained,Navigate to Home Screen,true,380,282
+Base,Read Screen Text,true,1209,829
+Trained,Read Screen Text,true,560,249
+Base,Order Uber to Bakery,true,1258,933
+Trained,Order Uber to Bakery,true,595,304
+Base,Find Red Toyota,false,2069,1006
+Trained,Find Red Toyota,true,432,318
+Base,Recall License Plate,false,1959,930
+Trained,Recall License Plate,true,532,338
+Base,Navigate to Home Screen,true,1863,917
+Trained,Navigate to Home Screen,true,569,315
+Base,Read Screen Text,true,1973,835
+Trained,Read Screen Text,true,359,314
+Base,Order Uber to Bakery,true,1561,925
+Trained,Order Uber to Bakery,true,454,272
+Base,Find Red Toyota,false,1465,800
+Trained,Find Red Toyota,true,477,269
+Base,Recall License Plate,true,1480,1028
+Trained,Recall License Plate,true,356,230
+Base,Navigate to Home Screen,true,1759,929
+Trained,Navigate to Home Screen,true,585,314
+Base,Read Screen Text,true,1528,830
+Trained,Read Screen Text,true,591,257
