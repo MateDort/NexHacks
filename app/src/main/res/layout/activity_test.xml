@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Gemini Live API Tests"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp"/>
+
+    <Button
+        android:id="@+id/btn_basic_test"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="1. Basic Text Test"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btn_function_test"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="2. Function Calling Test"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btn_audio_system_test"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="3. Audio System Diagnostic"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:layout_marginBottom="16dp"/>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <TextView
+            android:id="@+id/tv_log"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:fontFamily="monospace"
+            android:text="Select a test to run:\n\n1. Basic Text Test - Verifies WebSocket connection and text responses\n2. Function Calling Test - Tests all 3 agents (ConfigAgent, DatabaseAgent, GUIAgent)\n3. Audio System Diagnostic - Comprehensive audio streaming test with detailed logging\n"/>
+    </ScrollView>
+</LinearLayout>

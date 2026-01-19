@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Gemini Live API Diagnostic Test"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp"/>
+
+    <Button
+        android:id="@+id/testConnectionBtn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Test 1: Basic Connection"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/testAudioResponseBtn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Test 2: Audio Response"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/testFunctionBtn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Test 3: Function Calling"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Status Log:"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ready to test...\n"
+            android:textSize="12sp"
+            android:fontFamily="monospace"
+            android:background="#f0f0f0"
+            android:padding="8dp"/>
+    </ScrollView>
+
+</LinearLayout>

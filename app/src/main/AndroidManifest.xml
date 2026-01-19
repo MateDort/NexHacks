@@ -30,6 +30,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.TapMate"
+        android:usesCleartextTraffic="true"
         tools:targetApi="31">
 
         <!-- Main Activity -->
@@ -48,6 +49,39 @@
             android:name=".ui.SettingsActivity"
             android:label="@string/settings_title"
             android:parentActivityName=".ui.MainActivity" />
+
+        <!-- Test Activity -->
+        <activity
+            android:name=".test.TestActivity"
+            android:label="Gemini Live Test"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Audio Streaming Test Activity -->
+        <activity
+            android:name=".test.AudioStreamingTest"
+            android:label="Audio Streaming Test"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Diagnostic Test Activity -->
+        <activity
+            android:name=".test.GeminiDiagnosticTest"
+            android:label="Gemini Diagnostic Test"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <!-- Google Maps API Key -->
         <meta-data

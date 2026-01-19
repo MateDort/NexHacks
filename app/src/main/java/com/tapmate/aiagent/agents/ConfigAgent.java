@@ -82,9 +82,9 @@ public class ConfigAgent implements SubAgent {
             parameters.put("properties", properties);
 
             // Required parameters
-            JSONObject required = new JSONObject();
-            required.put("0", "action");
-            required.put("1", "setting");
+            org.json.JSONArray required = new org.json.JSONArray();
+            required.put("action");
+            required.put("setting");
             parameters.put("required", required);
 
             declaration.put("parameters", parameters);

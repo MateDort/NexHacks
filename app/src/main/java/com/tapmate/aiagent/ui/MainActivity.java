@@ -29,13 +29,16 @@ import com.tapmate.aiagent.R;
 import com.tapmate.aiagent.agents.ConfigAgent;
 import com.tapmate.aiagent.agents.DatabaseAgent;
 import com.tapmate.aiagent.agents.GUIAgent;
+import com.tapmate.aiagent.core.AgentSession;
+import com.tapmate.aiagent.core.GeminiLiveClient;
 import com.tapmate.aiagent.core.TapMateOrchestrator;
 
 /**
  * MainActivity - Full-screen effective color design for visually impaired users
  *
  * IDLE state: Full-screen yellow + purple triangle (start)
- * ACTIVE state: Top half yellow + purple pause lines (mute), bottom half red + purple rectangle (stop)
+ * ACTIVE state: Top half yellow + purple pause lines (mute), bottom half red +
+ * purple rectangle (stop)
  * Swipe right: Go to settings
  */
 public class MainActivity extends AppCompatActivity {
@@ -55,19 +58,16 @@ public class MainActivity extends AppCompatActivity {
     private TextView muteText;
     private TextView tvStatus;
 
-    // Audio recording
-    private AudioRecord audioRecord;
-    private boolean isRecording = false;
+    // Mute state (AudioHandler will handle actual audio capture)
     private boolean isMuted = false;
-    private Thread recordingThread;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+
         // Set status bar color to match app (yellow when idle)
         setStatusBarColor(R.color.effective_yellow);
-        
+
         setContentView(R.layout.activity_main);
 
         // Initialize views
@@ -87,6 +87,9 @@ public class MainActivity extends AppCompatActivity {
 
         // Setup button listeners
         setupListeners();
+
+        // Setup Gemini transcript callbacks
+        setupGeminiCallbacks();
 
         // Request permissions
         requestPermissions();
@@ -128,14 +131,15 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-                if (e1 == null || e2 == null) return false;
-                
+                if (e1 == null || e2 == null)
+                    return false;
+
                 float diffX = e2.getX() - e1.getX();
                 float diffY = e2.getY() - e1.getY();
 
                 if (Math.abs(diffX) > Math.abs(diffY) &&
-                    Math.abs(diffX) > SWIPE_THRESHOLD &&
-                    Math.abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
+                        Math.abs(diffX) > SWIPE_THRESHOLD &&
+                        Math.abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
 
                     if (diffX > 0) {
                         // Swipe right - open settings
@@ -148,18 +152,60 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void setupGeminiCallbacks() {
+        // Callbacks will be set after session starts (when client is available)
+        Log.i(TAG, "Gemini callbacks will be configured on session start");
+    }
+
+    private void configureSessionCallbacks() {
+        // Get Gemini client from orchestrator's active session
+        GeminiLiveClient geminiClient = orchestrator.getGeminiClient();
+        if (geminiClient == null) {
+            Log.w(TAG, "Cannot configure callbacks - no active session");
+            return;
+        }
+
+        // Setup complete callback
+        geminiClient.setSetupCompleteCallback(() -> {
+            runOnUiThread(() -> {
+                Log.i(TAG, "Setup complete - AudioHandler already managing audio");
+                updateStatus("Listening...");
+            });
+        });
+
+        // Transcript callback - display what user and AI are saying
+        geminiClient.setTranscriptCallback((text, isUser) -> {
+            runOnUiThread(() -> {
+                if (isUser) {
+                    updateStatus("You: " + text);
+                    Log.i(TAG, "User transcript: " + text);
+                } else {
+                    updateStatus("TapMate: " + text);
+                    Log.i(TAG, "AI transcript: " + text);
+                }
+            });
+        });
+
+        // Audio response callback (optional - just for logging)
+        geminiClient.setAudioResponseCallback(audioData -> {
+            Log.d(TAG, "Received audio response: " + audioData.length + " bytes");
+        });
+
+        Log.i(TAG, "Gemini callbacks configured for active session");
+    }
+
     private void setupListeners() {
         // Idle layout - handle both tap and swipe
         idleLayout.setOnTouchListener((v, event) -> {
             // First, try to detect swipe
             boolean swipeDetected = gestureDetector.onTouchEvent(event);
-            
+
             // If no swipe and it's a single tap (ACTION_UP), start session
             if (!swipeDetected && event.getAction() == MotionEvent.ACTION_UP) {
                 startSession();
                 return true;
             }
-            
+
             return swipeDetected;
         });
 
@@ -181,17 +227,18 @@ public class MainActivity extends AppCompatActivity {
             Log.i(TAG, "Starting session...");
 
             // Check microphone permission
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            if (ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                 Log.w(TAG, "Microphone permission required");
                 requestPermissions();
                 return;
             }
 
-            // Start orchestrator
+            // Start orchestrator (SessionManager will handle session creation)
             orchestrator.startSession();
 
-            // Start audio recording
-            startAudioRecording();
+            // Configure callbacks for the new session
+            configureSessionCallbacks();
 
             // Update UI to active state
             idleLayout.setVisibility(View.GONE);
@@ -200,8 +247,8 @@ public class MainActivity extends AppCompatActivity {
             // Change status bar to yellow (mute section color)
             setStatusBarColor(R.color.effective_yellow);
 
-            updateStatus("Listening...");
-            Log.i(TAG, "Session started successfully");
+            updateStatus("Connecting...");
+            Log.i(TAG, "Session starting via SessionManager");
 
         } catch (Exception e) {
             Log.e(TAG, "Error starting session", e);
@@ -212,10 +259,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             Log.i(TAG, "Stopping session...");
 
-            // Stop audio recording
-            stopAudioRecording();
-
-            // Stop orchestrator
+            // Stop orchestrator (SessionManager will cleanup AudioHandler)
             orchestrator.stopSession();
 
             // Update UI to idle state
@@ -239,92 +283,27 @@ public class MainActivity extends AppCompatActivity {
     private void toggleMute() {
         isMuted = !isMuted;
 
-        if (isMuted) {
-            // Muted - show triangle (unmute icon)
-            muteIcon.setImageResource(R.drawable.triangle_start);
-            muteText.setText("Unmute");
-            updateStatus("Muted");
-            Log.i(TAG, "Microphone muted");
-        } else {
-            // Unmuted - show pause lines (mute icon)
-            muteIcon.setImageResource(R.drawable.pause_lines);
-            muteText.setText("Mute");
-            updateStatus("Listening...");
-            Log.i(TAG, "Microphone unmuted");
-        }
-    }
-
-    private void startAudioRecording() {
-        if (isRecording) {
-            Log.w(TAG, "Already recording");
-            return;
-        }
-
-        try {
-            int bufferSize = AudioRecord.getMinBufferSize(
-                16000, // 16kHz sample rate
-                AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT
-            );
-
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                Log.e(TAG, "No microphone permission");
-                return;
+        // Get audio handler from active session to control muting
+        AgentSession session = orchestrator.getSession();
+        if (session != null && session.getAudioHandler() != null) {
+            if (isMuted) {
+                session.getAudioHandler().stopCapture();
+                muteIcon.setImageResource(R.drawable.triangle_start);
+                muteText.setText("Unmute");
+                updateStatus("Muted");
+                Log.i(TAG, "Microphone muted");
+            } else {
+                session.getAudioHandler().startCapture();
+                muteIcon.setImageResource(R.drawable.pause_lines);
+                muteText.setText("Mute");
+                updateStatus("Listening...");
+                Log.i(TAG, "Microphone unmuted");
             }
-
-            audioRecord = new AudioRecord(
-                MediaRecorder.AudioSource.MIC,
-                16000,
-                AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                bufferSize
-            );
-
-            audioRecord.startRecording();
-            isRecording = true;
-
-            // Start recording thread
-            recordingThread = new Thread(() -> {
-                byte[] buffer = new byte[bufferSize];
-                int consecutiveReads = 0;
-                
-                while (isRecording && !Thread.currentThread().isInterrupted()) {
-                    int bytesRead = audioRecord.read(buffer, 0, buffer.length);
-                    if (bytesRead > 0 && !isMuted) {
-                        // Log every 50th read to avoid spam
-                        if (consecutiveReads % 50 == 0) {
-                            Log.d(TAG, "✓ Audio receiving: " + bytesRead + " bytes (microphone is working!)");
-                        }
-                        consecutiveReads++;
-                        // TODO: Process audio data (send to Gemini)
-                    }
-                }
-            });
-            recordingThread.start();
-
-            Log.i(TAG, "✓ Audio recording started successfully - check logcat for audio data");
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error starting audio recording", e);
         }
     }
 
-    private void stopAudioRecording() {
-        isRecording = false;
-
-        if (recordingThread != null) {
-            recordingThread.interrupt();
-            recordingThread = null;
-        }
-
-        if (audioRecord != null) {
-            audioRecord.stop();
-            audioRecord.release();
-            audioRecord = null;
-        }
-
-        Log.i(TAG, "Audio recording stopped");
-    }
+    // Audio recording removed - AudioHandler in GeminiLiveClient now handles all
+    // audio capture
 
     private void openSettings() {
         // TODO: Create SettingsActivity
@@ -338,10 +317,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void requestPermissions() {
         String[] permissions = {
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.CAMERA,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.VIBRATE
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.CAMERA,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.VIBRATE
         };
 
         boolean needsPermission = false;
@@ -358,7 +337,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
         if (requestCode == PERMISSION_REQUEST_CODE) {
@@ -381,7 +361,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        stopAudioRecording();
+
         if (orchestrator != null && orchestrator.isSessionActive()) {
             orchestrator.stopSession();
         }

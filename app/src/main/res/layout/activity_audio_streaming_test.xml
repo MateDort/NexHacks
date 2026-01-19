@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#FFFFFF">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🎤 Gemini Live Audio Test"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="#000000"
+        android:gravity="center"
+        android:layout_marginBottom="24dp"/>
+
+    <!-- Status -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Status:"
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:textStyle="bold"
+        android:layout_marginBottom="4dp"/>
+
+    <TextView
+        android:id="@+id/status_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Ready to start"
+        android:textSize="16sp"
+        android:textColor="#000000"
+        android:padding="12dp"
+        android:background="#F0F0F0"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Control Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="24dp">
+
+        <Button
+            android:id="@+id/start_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="▶️ Start Session"
+            android:textSize="16sp"
+            android:padding="12dp"
+            android:layout_marginEnd="8dp"/>
+
+        <Button
+            android:id="@+id/stop_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="⏹️ Stop Session"
+            android:textSize="16sp"
+            android:padding="12dp"
+            android:enabled="false"/>
+    </LinearLayout>
+
+    <!-- Transcript Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Transcript:"
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:textStyle="bold"
+        android:layout_marginBottom="4dp"/>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#F5F5F5"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/transcript_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Transcripts will appear here...\n\nTry saying:\n• 'Hello, can you hear me?'\n• 'Set my humor to 80 percent'\n• 'Recall our last conversation'\n"
+            android:textSize="14sp"
+            android:textColor="#000000"
+            android:fontFamily="monospace"
+            android:lineSpacingExtra="4dp"/>
+    </ScrollView>
+
+    <!-- Instructions -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="💡 Test interruption: Start speaking while AI is talking"
+        android:textSize="12sp"
+        android:textColor="#666666"
+        android:gravity="center"
+        android:layout_marginTop="8dp"/>
+
+</LinearLayout>

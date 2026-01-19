@@ -70,8 +70,8 @@ public class DatabaseAgent implements SubAgent {
             parameters.put("properties", properties);
 
             // Required
-            JSONObject required = new JSONObject();
-            required.put("0", "query");
+            org.json.JSONArray required = new org.json.JSONArray();
+            required.put("query");
             parameters.put("required", required);
 
             declaration.put("parameters", parameters);
